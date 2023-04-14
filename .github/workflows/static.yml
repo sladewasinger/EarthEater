@@ -42,4 +42,4 @@ jobs:
       - name: Deploying the static website to gh-pages
         run: cd client && npm install && npm run deploy
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAGES_TOKEN }}
