@@ -33,4 +33,4 @@ jobs:
         uses: actions/checkout@v3
        # Run our deployment command
       - name: Deploying the static website to gh-pages
-        run: cd client && npm intall && npm run deploy
+        run: cd client && npm install && npm run deploy
