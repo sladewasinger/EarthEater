@@ -35,8 +35,7 @@ jobs:
         uses: actions/configure-pages@v3
       - name: Install dependencies
         run: npm install
-        with:
-          working-directory: ./client
+        working-directory: ./client
       - name: Build
         run: npm run build
         with:
