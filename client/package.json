@@ -8,7 +8,7 @@
     "dev": "vite",
     "build": "vite build",
     "predeploy": "npm run build",
-    "deploy": "node ../.github/scripts/gh-pages-deploy.mjs"
+    "deploy": "node scripts/gh-pages-deploy.mjs"
   },
   "devDependencies": {
     "execa": "^7.1.1",
