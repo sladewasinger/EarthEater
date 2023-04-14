@@ -34,8 +34,6 @@ jobs:
       - uses: actions/setup-node@v2
         with:
           node-version: "16"
-      - name: Set Creds
-        run: git config user.name "sladewasinger"
        # Run our deployment command
       - name: Deploying the static website to gh-pages
         run: cd client && npm install && npm run deploy
