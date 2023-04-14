@@ -1,14 +1,3 @@
-# Simple workflow for deploying static content to GitHub Pages
-name: Deploy static content to Pages
-
-on:
-  # Runs on pushes targeting the default branch
-  push:
-    branches: ["master"]
-
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
-
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
   contents: read
@@ -31,15 +20,17 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - uses: actions/setup-node@v2
+      - name: Setup Pages
+        uses: actions/configure-pages@v3
+      - name: Install dependencies
+        run: npm install
+      - name: Build
+        run: npm run build
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v1
         with:
-          node-version: "16"
-      - name: Set user.name
-        run: git config user.name "sladewasinger"
-      - name: Set user.email
-        run: git config user.email ${{ secrets.EMAIL }}
-       # Run our deployment command
-      - name: Deploying the static website to gh-pages
-        run: cd client && npm install && npm run deploy
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAGES_TOKEN }}
+          # Upload client dist folder
+          path: './client/dist'
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2
