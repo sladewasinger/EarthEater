@@ -11,7 +11,7 @@ import * as fs from 'fs';
         await execa("git", ["--work-tree", folderName, "add", "--all"]);
         await execa("git", ["--work-tree", folderName, "commit", "-m", "gh-pages"]);
         console.log("Pushing to gh-pages...");
-        await execa("git", ["push", "--force", "origin", "HEAD:gh-pages", "--force", "--set-upstream", "--receive-pack=git", `--repo=https://${process.env.GITHUB_TOKEN}@github.com/sladewasinger/EarthEater.git`]);
+        await execa("git", ["push", "--force", `https://${process.env.GITHUB_TOKEN}@github.com/sladewasinger/EarthEater.git`, "HEAD:gh-pages"]);
         await execa("rm", ["-r", folderName]);
         await execa("git", ["checkout", "-f", "master"]);
         await execa("git", ["branch", "-D", "gh-pages"]);
