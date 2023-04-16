@@ -5,6 +5,8 @@ import { Renderer } from "./Renderer";
 import { Vector } from "./Vector";
 import { Player } from "./models/Player";
 import { Mouse } from "./models/Mouse";
+import { GridTile } from "./models/GridTile";
+import { Explosion } from "./Explosion";
 
 export class EngineState {
     fireDelay: number = 1000;
@@ -29,7 +31,6 @@ export class Engine {
 
     onKeyUp(e: KeyboardEvent): any {
         this.gameState.inputs[e.key] = false;
-        this.gameState.player.moveDebounce = false;
     }
 
     onKeyDown(e: KeyboardEvent): any {
@@ -37,16 +38,8 @@ export class Engine {
     }
 
     public start() {
-        // place player in closest air tile:
-        for (let y = 0; y < this.gameState.grid.length; y++) {
-            for (let x = 0; x < this.gameState.grid[y].length; x++) {
-                if (this.gameState.grid[y][x].type === "air") {
-                    this.gameState.player.position.x = x;
-                    this.gameState.player.position.y = y;
-                    break;
-                }
-            }
-        }
+        // create polygon mesh for terrain
+        this.gameState.terrainMesh = this.createTerrainMesh();
 
         setInterval(() => {
             this.update();
@@ -59,65 +52,67 @@ export class Engine {
 
         this.gameState.frame++;
 
-        this.gameState.player.move(this.gameState, this.mouse, this.renderer);
-
-        if (!this.engineState.fireDebounce && this.gameState.inputs[" "]) {
-            // drop dynamite
+        if (this.mouse.left && !this.engineState.fireDebounce) {
             this.engineState.fireDebounce = true;
             setTimeout(() => {
                 this.engineState.fireDebounce = false;
             }, this.engineState.fireDelay);
 
-            let pos = this.gameState.player.position.clone(); //Vector.add(this.gameState.player.position, Vector.normalize(Vector.fromAngle(this.gameState.player.facingAngle, 1)));
-            if (this.gameState.grid[pos.y][pos.x]?.type === "air") {
-                this.createDynamite(pos, 1000, this.gameState.player);
-            }
-        }
+            let explosion = new Explosion(this.mouse.position.clone(), 100, 10000);
+            this.gameState.explosions.push(explosion);
 
-        // center camera on player accounting for zoom:
-        const cameraTargetPos = new Vector(
-            this.gameState.player.position.x * this.renderer.tileSize * this.renderer.camera.zoom - this.renderer.canvas.width / 2,
-            this.gameState.player.position.y * this.renderer.tileSize * this.renderer.camera.zoom - this.renderer.canvas.height / 2
-        );
-        const cameraPos = Vector.lerp(new Vector(this.renderer.camera.x, this.renderer.camera.y), cameraTargetPos, 0.1);
-        this.renderer.pan(
-            cameraPos.x,
-            cameraPos.y
-        );
-
-        for (let dynamite of this.gameState.dynamites) {
-            dynamite.update(dt);
-        }
-
-        this.renderer.render(this.gameState);
-        this.gameState.lastUpdate = now;
-    }
-
-    private createDynamite(pos: Vector, fuseMs: number, owner: Player) {
-        const dynamite = new Dynamite(pos, fuseMs, owner);
-        this.gameState.dynamites.push(dynamite);
-        setTimeout(() => {
-            this.explodeDynamite(dynamite, pos);
-        }, fuseMs);
-    }
-
-    private explodeDynamite(dynamite: Dynamite, pos: Vector) {
-        let explosionRadius = 4;
-        let explosionTiles = [];
-        for (let y = pos.y - explosionRadius + 0.5; y <= pos.y + explosionRadius; y += 0.5) {
-            for (let x = pos.x - explosionRadius + 0.5; x <= pos.x + explosionRadius; x += 0.5) {
-                if (this.gameState.grid[y] && this.gameState.grid[y][x]?.type === "stone" && Vector.distance(new Vector(x, y), pos) <= explosionRadius) {
-                    explosionTiles.push(new Vector(x, y));
+            // destroy terrain mesh around explosion:
+            let explosionRadius = explosion.radius;
+            let explosionPos = explosion.position;
+            for (let point of this.gameState.terrainMesh) {
+                let distance = Vector.distance(point, explosionPos);
+                if (distance < explosionRadius) {
+                    // push point.y outside of circle
+                    let angle = Vector.angleBetween(point, explosionPos);
+                    let newPosY = point.y + Math.abs(Math.sin(angle) * explosionRadius);
+                    point.y = newPosY;
                 }
             }
         }
 
-        this.renderer.queueExplosion(pos, explosionRadius, 2500);
-
-        for (let tile of explosionTiles) {
-            this.gameState.grid[tile.y][tile.x].type = "air";
+        for (let i = 0; i < this.gameState.explosions.length; i++) {
+            let explosion = this.gameState.explosions[i];
+            explosion.update(dt);
+            if (explosion.timeLeftMs <= 0) {
+                this.gameState.explosions.splice(i, 1);
+            }
         }
 
-        this.gameState.dynamites = this.gameState.dynamites.filter(d => d !== dynamite);
+        this.renderer.render(this.gameState);
+
+        // render explosions
+        for (let explosion of this.gameState.explosions) {
+            this.renderer.renderCircle(explosion.position, explosion.radius, 'rgba(255, 0, 0, 0.5)');
+        }
+
+        this.gameState.lastUpdate = now;
+    }
+
+    private createTerrainMesh(): Vector[] {
+        let startPos = new Vector(0, Math.round(this.renderer.canvas.height / 2));
+        let endPosX = this.renderer.canvas.width;
+
+        let terrainMesh = <Vector[]>[];
+        terrainMesh.push(startPos);
+
+        let resolution = 10;
+        let lastPos = startPos;
+        for (let i = 0; i < (endPosX - startPos.x) / resolution; i++) {
+            let pos = new Vector(lastPos.x + resolution, Math.min(this.renderer.canvas.height, lastPos.y + (Math.random() * 2 - 1) * 1));
+            terrainMesh.push(pos);
+            lastPos = pos;
+        }
+
+        const bottomRight = new Vector(this.renderer.canvas.width, this.renderer.canvas.height);
+        const bottomLeft = new Vector(0, this.renderer.canvas.height);
+        terrainMesh.push(bottomRight);
+        terrainMesh.push(bottomLeft);
+
+        return terrainMesh;
     }
 }
