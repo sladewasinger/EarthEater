@@ -75,9 +75,14 @@ export class Engine {
         }
 
         // center camera on player accounting for zoom:
-        this.renderer.pan(
+        const cameraTargetPos = new Vector(
             this.gameState.player.position.x * this.renderer.tileSize * this.renderer.camera.zoom - this.renderer.canvas.width / 2,
             this.gameState.player.position.y * this.renderer.tileSize * this.renderer.camera.zoom - this.renderer.canvas.height / 2
+        );
+        const cameraPos = Vector.lerp(new Vector(this.renderer.camera.x, this.renderer.camera.y), cameraTargetPos, 0.1);
+        this.renderer.pan(
+            cameraPos.x,
+            cameraPos.y
         );
 
         for (let dynamite of this.gameState.dynamites) {
@@ -97,17 +102,17 @@ export class Engine {
     }
 
     private explodeDynamite(dynamite: Dynamite, pos: Vector) {
-        let explosionRadius = 3;
+        let explosionRadius = 4;
         let explosionTiles = [];
-        for (let y = pos.y - explosionRadius; y <= pos.y + explosionRadius; y++) {
-            for (let x = pos.x - explosionRadius; x <= pos.x + explosionRadius; x++) {
+        for (let y = pos.y - explosionRadius + 0.5; y <= pos.y + explosionRadius; y += 0.5) {
+            for (let x = pos.x - explosionRadius + 0.5; x <= pos.x + explosionRadius; x += 0.5) {
                 if (this.gameState.grid[y] && this.gameState.grid[y][x]?.type === "stone" && Vector.distance(new Vector(x, y), pos) <= explosionRadius) {
                     explosionTiles.push(new Vector(x, y));
                 }
             }
         }
 
-        this.renderer.queueExplosion(pos, explosionRadius, 250);
+        this.renderer.queueExplosion(pos, explosionRadius, 2500);
 
         for (let tile of explosionTiles) {
             this.gameState.grid[tile.y][tile.x].type = "air";

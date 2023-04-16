@@ -36,12 +36,13 @@ export class Player {
             this.position.x + 0.5,
             this.position.y + 0.5
         );
-        const mouseWorldPosition = mouse.getWorldPosition(renderer);
+        const mouseWorldPosition = renderer.getWorldPosition(mouse.position);
         const rawAngle = Vector.angleBetween(playerCenter, mouseWorldPosition);
-        this.facingAngle = MathUtils.snapToNearestAngle(
-            rawAngle,
-            Math.PI / 4
-        );
+        // this.facingAngle = MathUtils.snapToNearestAngle(
+        //     rawAngle,
+        //     Math.PI / 4
+        // );
+        this.facingAngle = rawAngle;
 
         // Print debug informationw
         console.log('Player position:', this.position);

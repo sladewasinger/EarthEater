@@ -45,11 +45,4 @@ export class Mouse {
             }
         });
     }
-
-    public getWorldPosition(renderer: Renderer): Vector {
-        let worldPos = Vector.add(this.position, new Vector(renderer.camera.x, renderer.camera.y));
-        worldPos = Vector.divideN(worldPos, renderer.camera.zoom);
-        worldPos = Vector.divideN(worldPos, renderer.tileSize);
-        return worldPos;
-    }
 }

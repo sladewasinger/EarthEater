@@ -29,6 +29,13 @@ export class Renderer {
         this.resize();
     }
 
+    getWorldPosition(pos: Vector): Vector {
+        let worldPos = Vector.add(pos, new Vector(this.camera.x, this.camera.y));
+        worldPos = Vector.divideN(worldPos, this.camera.zoom);
+        worldPos = Vector.divideN(worldPos, this.tileSize);
+        return worldPos;
+    }
+
     zoom(zoom: number) {
         this.camera.zoom = zoom;
     }
@@ -157,15 +164,33 @@ export class Renderer {
             for (let x = left; x < right; x++) {
                 if (gameState.grid[y] && gameState.grid[y][x]) {
                     const tile = gameState.grid[y][x];
-                    ctx.fillStyle = this.tileTypeToColor(tile.type);
+                    const tileCenter = new Vector(x + 0.5, y + 0.5);
+                    const distanceToPlayer = Vector.distance(
+                        tileCenter,
+                        gameState.player.position,
+                    );
                     const tileX = x * this.tileSize;
                     const tileY = y * this.tileSize;
+
+                    ctx.fillStyle = this.tileTypeToColor(tile.type);
+
                     if (tile.type !== 'stone') {
                         ctx.fillRect(
                             tileX,
                             tileY,
                             this.tileSize,
                             this.tileSize,
+                        );
+                    }
+
+                    if (distanceToPlayer > 6) {
+                        ctx.fillStyle = 'rgba(0, 0, 0, 1)';
+                        const overlap = 1; // Overlap by 1 pixel to cover gaps
+                        ctx.fillRect(
+                            Math.floor(tileX - overlap / 2),
+                            Math.floor(tileY - overlap / 2),
+                            this.tileSize + overlap,
+                            this.tileSize + overlap,
                         );
                     }
                 }
