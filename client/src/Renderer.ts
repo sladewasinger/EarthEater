@@ -6,7 +6,6 @@ import { GameState } from "./models/GameState";
 export class Renderer {
     canvas: HTMLCanvasElement;
     camera: Camera = new Camera();
-    tileSize: number = 32;
     images: { [key: string]: HTMLImageElement } = {};
     explosions: Explosion[] = [];
 
@@ -20,7 +19,6 @@ export class Renderer {
     getWorldPosition(pos: Vector): Vector {
         let worldPos = Vector.add(pos, new Vector(this.camera.x, this.camera.y));
         worldPos = Vector.divideN(worldPos, this.camera.zoom);
-        worldPos = Vector.divideN(worldPos, this.tileSize);
         return worldPos;
     }
 
@@ -65,6 +63,12 @@ export class Renderer {
         // Clear the canvas
         ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.renderTerrainMesh(ctx, gameState.terrainMesh);
+        this.renderPLayers(ctx, gameState);
+    }
+
+    private adjustToCamera(ctx: CanvasRenderingContext2D) {
+        ctx.scale(this.camera.zoom, this.camera.zoom);
+        ctx.translate(-this.camera.x, -this.camera.y);
     }
 
     private renderTerrainMesh(ctx: CanvasRenderingContext2D, terrainMesh: Vector[]) {
@@ -83,11 +87,19 @@ export class Renderer {
         ctx.restore();
     }
 
-    private adjustToCamera(ctx: CanvasRenderingContext2D) {
-        ctx.translate(-this.camera.x, -this.camera.y);
-        ctx.scale(this.camera.zoom, this.camera.zoom);
-    }
+    private renderPLayers(ctx: CanvasRenderingContext2D, gameState: GameState) {
+        for (let player of gameState.players) {
+            // draw tank as square
+            ctx.save();
+            this.adjustToCamera(ctx);
 
+            ctx.translate(player.position.x, player.position.y);
+            ctx.fillStyle = '#00ff00';
+            ctx.fillRect(0, 0, player.hitBox.x, player.hitBox.y);
+
+            ctx.restore();
+        }
+    }
 
     public renderCircle(position: Vector, radius: number, color: string) {
         const ctx = this.canvas.getContext('2d');
@@ -114,10 +126,10 @@ export class Renderer {
 
         ctx.fillStyle = color;
         ctx.fillRect(
-            pos.x * this.tileSize,
-            pos.y * this.tileSize,
-            size.x * this.tileSize,
-            size.y * this.tileSize
+            pos.x,
+            pos.y,
+            size.x,
+            size.y
         );
 
         ctx.restore();

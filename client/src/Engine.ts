@@ -5,12 +5,13 @@ import { Renderer } from "./Renderer";
 import { Vector } from "./Vector";
 import { Player } from "./models/Player";
 import { Mouse } from "./models/Mouse";
-import { GridTile } from "./models/GridTile";
 import { Explosion } from "./Explosion";
 
 export class EngineState {
     fireDelay: number = 1000;
     fireDebounce: boolean = false;
+    myPlayerId: string | undefined;
+    gravity: number = 90;
 }
 
 export class Engine {
@@ -29,6 +30,10 @@ export class Engine {
         window.addEventListener('keyup', (e) => this.onKeyUp(e));
     }
 
+    get myPlayer() {
+        return this.gameState.players.find(p => p.id === this.engineState.myPlayerId);
+    }
+
     onKeyUp(e: KeyboardEvent): any {
         this.gameState.inputs[e.key] = false;
     }
@@ -40,6 +45,10 @@ export class Engine {
     public start() {
         // create polygon mesh for terrain
         this.gameState.terrainMesh = this.createTerrainMesh();
+        const player = new Player('test');
+        this.gameState.players.push(player);
+        this.engineState.myPlayerId = player.id;
+        this.myPlayer!.position = new Vector(500, 300);
 
         setInterval(() => {
             this.update();
@@ -52,19 +61,32 @@ export class Engine {
 
         this.gameState.frame++;
 
+        // apply gravity
+        for (let player of this.gameState.players) {
+            player.position.y += this.engineState.gravity * dt / 1000;
+
+            // resolve player ground collision
+            for (let point of this.gameState.terrainMesh) {
+                if (point.x >= player.position.x && point.x <= player.position.x + player.hitBox.x) {
+                    let yPos = point.y - player.hitBox.y;
+                    player.position.y = Math.min(player.position.y, yPos);
+                }
+            }
+        }
+
         if (this.mouse.left && !this.engineState.fireDebounce) {
             this.engineState.fireDebounce = true;
             setTimeout(() => {
                 this.engineState.fireDebounce = false;
             }, this.engineState.fireDelay);
 
-            let explosion = new Explosion(this.mouse.position.clone(), 100, 1000);
+            let mouseWorldPos = this.renderer.getWorldPosition(this.mouse.position);
+            let explosion = new Explosion(mouseWorldPos, 50, 1000);
             this.gameState.explosions.push(explosion);
 
             let explosionRadius = explosion.radius;
             let explosionPos = explosion.position;
             for (let point of this.gameState.terrainMesh) {
-                let distance = Vector.distance(point, explosionPos);
                 if (point.x >= explosionPos.x - explosionRadius && point.x <= explosionPos.x + explosionRadius) {
                     let yPos = explosionPos.y + Math.sqrt(Math.pow(explosionRadius, 2) - Math.pow(point.x - explosionPos.x, 2));
                     point.y = Math.max(point.y, yPos);
