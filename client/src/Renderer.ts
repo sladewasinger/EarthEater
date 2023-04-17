@@ -17,8 +17,7 @@ export class Renderer {
     }
 
     getWorldPosition(pos: Vector): Vector {
-        let worldPos = Vector.add(pos, new Vector(this.camera.x, this.camera.y));
-        worldPos = Vector.divideN(worldPos, this.camera.zoom);
+        let worldPos = new Vector(pos.x / this.camera.zoom + this.camera.x, pos.y / this.camera.zoom + this.camera.y);
         return worldPos;
     }
 
@@ -121,8 +120,7 @@ export class Renderer {
         if (!ctx) throw new Error('Canvas context not found');
 
         ctx.save();
-        ctx.translate(-this.camera.x, -this.camera.y);
-        ctx.scale(this.camera.zoom, this.camera.zoom);
+        this.adjustToCamera(ctx);
 
         ctx.fillStyle = color;
         ctx.fillRect(

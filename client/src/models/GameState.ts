@@ -11,4 +11,5 @@ export class GameState {
     explosions: Explosion[] = [];
     lastUpdate: number = 0;
     terrainMesh: Vector[] = [];
+    isSand: boolean = false;
 }
