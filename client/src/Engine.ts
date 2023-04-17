@@ -58,19 +58,16 @@ export class Engine {
                 this.engineState.fireDebounce = false;
             }, this.engineState.fireDelay);
 
-            let explosion = new Explosion(this.mouse.position.clone(), 100, 10000);
+            let explosion = new Explosion(this.mouse.position.clone(), 100, 1000);
             this.gameState.explosions.push(explosion);
 
-            // destroy terrain mesh around explosion:
             let explosionRadius = explosion.radius;
             let explosionPos = explosion.position;
             for (let point of this.gameState.terrainMesh) {
                 let distance = Vector.distance(point, explosionPos);
-                if (distance < explosionRadius) {
-                    // push point.y outside of circle
-                    let angle = Vector.angleBetween(point, explosionPos);
-                    let newPosY = point.y + Math.abs(Math.sin(angle) * explosionRadius);
-                    point.y = newPosY;
+                if (point.x >= explosionPos.x - explosionRadius && point.x <= explosionPos.x + explosionRadius) {
+                    let yPos = explosionPos.y + Math.sqrt(Math.pow(explosionRadius, 2) - Math.pow(point.x - explosionPos.x, 2));
+                    point.y = Math.max(point.y, yPos);
                 }
             }
         }
@@ -102,11 +99,12 @@ export class Engine {
 
         let resolution = 10;
         let lastPos = startPos;
-        for (let i = 0; i < (endPosX - startPos.x) / resolution; i++) {
-            let pos = new Vector(lastPos.x + resolution, Math.min(this.renderer.canvas.height, lastPos.y + (Math.random() * 2 - 1) * 1));
+        for (let i = 0; i < endPosX; i += resolution) {
+            let pos = new Vector(i, Math.min(this.renderer.canvas.height, lastPos.y + (Math.random() * 2 - 1) * 1));
             terrainMesh.push(pos);
             lastPos = pos;
         }
+        terrainMesh.push(new Vector(endPosX, startPos.y));
 
         const bottomRight = new Vector(this.renderer.canvas.width, this.renderer.canvas.height);
         const bottomLeft = new Vector(0, this.renderer.canvas.height);
