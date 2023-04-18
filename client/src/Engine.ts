@@ -37,18 +37,20 @@ export class Engine {
     }
 
     onKeyUp(e: KeyboardEvent): any {
-        this.gameState.inputs[e.key] = false;
+        this.gameState.inputs[e.key.toLowerCase()] = false;
         this.handleImmediateInput(e.key);
     }
 
     onKeyDown(e: KeyboardEvent): any {
-        this.gameState.inputs[e.key] = true;
+        this.gameState.inputs[e.key.toLowerCase()] = true;
     }
 
     public async start() {
         this.gameState.terrainMesh = await this.createTerrainMesh();
-
-        const player = new Player('test');
+        if (this.gameState.isSand) {
+            while (this.smoothTerrain()) { /* keep smoothing until there are no more changes */ }
+        }
+        const player = new Player('id1', 'Player 1');
         player.color = 'blue';
         this.gameState.players.push(player);
         this.engineState.myPlayerId = player.id;
@@ -106,6 +108,8 @@ export class Engine {
 
         // create explosion on mouse click
         if (this.engineState.debug && this.mouse.left && !this.engineState.fireDebounce) {
+            this.engineState.fireDebounce = true;
+            setTimeout(() => this.engineState.fireDebounce = false, this.engineState.fireDelay);
             let mouseWorldPos = this.renderer.getWorldPosition(this.mouse.position);
             this.createExplosion(mouseWorldPos, 50, 100);
         }
@@ -133,19 +137,7 @@ export class Engine {
         }
 
         if (this.gameState.isSand) {
-            for (let i = 0; i < this.gameState.terrainMesh.length - 3; i++) {
-                let point = this.gameState.terrainMesh[i];
-                let nextPoint = this.gameState.terrainMesh[i + 1];
-                if (nextPoint) {
-                    const timeScale = 1000 / this.fps / dt;
-                    let diff = nextPoint.y - point.y;
-                    let maxPeak = 5;
-                    if (Math.abs(diff) > maxPeak) {
-                        point.y += diff * timeScale / 2;
-                        nextPoint.y -= diff / 2;
-                    }
-                }
-            }
+            this.smoothTerrain();
         }
 
         this.renderer.render(this.gameState);
@@ -169,10 +161,30 @@ export class Engine {
             this.renderer.renderParabolicTrajectory(
                 this.myPlayer.getCanonTipPosition(),
                 this.myPlayer.getCanonTipVelocity(),
-                this.gameState, 50, 'rgba(0, 0, 0, 0.5)');
+                this.gameState, 75, 'rgba(0, 0, 0, 0.5)');
         }
 
         this.gameState.lastUpdate = now;
+    }
+
+    private smoothTerrain() {
+        let changesMade = false;
+
+        for (let i = 0; i < this.gameState.terrainMesh.length - 3; i++) {
+            let point = this.gameState.terrainMesh[i];
+            let nextPoint = this.gameState.terrainMesh[i + 1];
+            if (nextPoint) {
+                let diff = nextPoint.y - point.y;
+                let maxPeak = 5;
+                if (Math.abs(diff) > maxPeak) {
+                    point.y += diff / 2;
+                    nextPoint.y -= diff / 2;
+                    changesMade = true;
+                }
+            }
+        }
+
+        return changesMade;
     }
 
     private createExplosion(pos: Vector, radius: number, damage: number) {
@@ -192,60 +204,59 @@ export class Engine {
 
         const maxSlope = 2;
         const speed = 20;
+        let direction = 0;
         if (this.gameState.inputs['d']) {
-            // check slope of adjacent terrain points and halt movement if slope is too steep
-            let player = this.myPlayer!;
-            let playerPos = player.position;
-            let playerHitBox = player.hitBox;
-            let terrainMesh = this.gameState.terrainMesh;
-            let terrainPoint = terrainMesh.find(p => p.x >= playerPos.x && p.x <= playerPos.x + playerHitBox.x);
-            if (terrainPoint) {
-                let terrainPointIndex = terrainMesh.indexOf(terrainPoint);
-                let nextTerrainPoint = terrainMesh[terrainPointIndex + 1];
-                if (nextTerrainPoint) {
-                    let slope = (nextTerrainPoint.y - terrainPoint.y) / (nextTerrainPoint.x - terrainPoint.x);
-                    if (slope < -maxSlope) {
-                        return;
-                    }
-                }
-            }
-            this.myPlayer!.position.x += speed * dt / 1000;
+            direction = 1;
         }
         if (this.gameState.inputs['a']) {
-            // check slope of line at player center and halt movement if slope is too steep
+            direction = -1;
+        }
+        if (direction !== 0) {
+            // check slope of adjacent terrain points and halt movement if slope is too steep
             let player = this.myPlayer!;
-            let playerPos = player.position.clone();
-            let playerHitBox = player.hitBox;
+            let playerPos = new Vector(player.position.x + player.hitBox.x / 2, player.position.y);
             let terrainMesh = this.gameState.terrainMesh;
-            let terrainPoint = terrainMesh.find(p => p.x >= playerPos.x && p.x <= playerPos.x + playerHitBox.x);
+            let terrainPoint = [...terrainMesh]
+                .filter(a => a.x >= playerPos.x && a.x <= playerPos.x + player.hitBox.x)
+                .sort((a, b) => Vector.distance(a, playerPos) - Vector.distance(b, playerPos))[0];
             if (terrainPoint) {
                 let terrainPointIndex = terrainMesh.indexOf(terrainPoint);
-                let nextTerrainPoint = terrainMesh[terrainPointIndex - 1];
+                let nextTerrainPoint = terrainMesh[terrainPointIndex + direction];
                 if (nextTerrainPoint) {
                     let slope = (nextTerrainPoint.y - terrainPoint.y) / (nextTerrainPoint.x - terrainPoint.x);
-                    if (slope > maxSlope) {
-                        return;
+                    if (direction === -1 && slope < maxSlope || direction === 1 && slope > -maxSlope) {
+                        this.myPlayer!.position.x += direction * speed * dt / 1000;
                     }
                 }
             }
-            this.myPlayer!.position.x -= speed * dt / 1000;
         }
 
+        let angleAdjustment = 0;
+
         if (this.gameState.inputs['q']) {
-            this.myPlayer.facingAngle -= 0.005;
-            this.myPlayer.facingAngle = MathUtils.clamp(this.myPlayer.facingAngle, Math.PI, 2 * Math.PI);
+            angleAdjustment = -0.003;
+            if (this.gameState.inputs["shift"]) {
+                angleAdjustment *= 10;
+            }
         }
         if (this.gameState.inputs['e']) {
-            this.myPlayer.facingAngle += 0.005;
+            angleAdjustment = 0.003;
+            if (this.gameState.inputs["shift"]) {
+                angleAdjustment *= 10;
+            }
+        }
+        if (angleAdjustment !== 0) {
+            this.myPlayer.facingAngle += angleAdjustment;
             this.myPlayer.facingAngle = MathUtils.clamp(this.myPlayer.facingAngle, Math.PI, 2 * Math.PI);
         }
+
         if (this.gameState.inputs['w']) {
-            this.myPlayer.canonPower += 5;
-            this.myPlayer.canonPower = MathUtils.clamp(this.myPlayer.canonPower, this.engineState.minCanonVelocity, this.engineState.maxCanonVelocity);
+            this.myPlayer.power += 5;
+            this.myPlayer.power = MathUtils.clamp(this.myPlayer.power, this.engineState.minCanonVelocity, this.engineState.maxCanonVelocity);
         }
         if (this.gameState.inputs['s']) {
-            this.myPlayer.canonPower -= 5;
-            this.myPlayer.canonPower = MathUtils.clamp(this.myPlayer.canonPower, this.engineState.minCanonVelocity, this.engineState.maxCanonVelocity);
+            this.myPlayer.power -= 5;
+            this.myPlayer.power = MathUtils.clamp(this.myPlayer.power, this.engineState.minCanonVelocity, this.engineState.maxCanonVelocity);
         }
 
         if (this.gameState.inputs[' '] && !this.engineState.fireDebounce) {
@@ -295,16 +306,12 @@ export class Engine {
         let terrainMesh = <Vector[]>[];
         terrainMesh.push(startPos);
 
-        let resolution = 10; // space between points
+        let resolution = 5; // space between points
 
         // implement midpoint displacement algorithm
+        let points = [startPos, new Vector(endPosX, startPos.y)];
 
-        // seed:
-        const seedX = worldWidth / 2;
-        const seedY = worldHeight * 0.5 + MathUtils.random(-worldHeight * 0.5, worldHeight * 0.5);
-
-        let points = [startPos, new Vector(seedX, seedY), new Vector(endPosX, startPos.y)];
-        const roughness = 1.3;
+        const roughness = 0.4;
 
         let displacement = worldHeight;
 
@@ -326,7 +333,7 @@ export class Engine {
                 this.renderer.render(this.gameState);
 
             }
-            displacement *= 2 ** (-roughness);
+            displacement *= roughness;
         }
         terrainMesh.push(...points);
         terrainMesh.push(new Vector(endPosX, startPos.y));

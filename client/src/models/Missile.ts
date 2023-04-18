@@ -23,6 +23,10 @@ export class Missile {
             this.position = Vector.add(this.position, Vector.multiply(this.velocity, dt / 1000));
 
             // check for collision with terrain
+            if (this.isInsideOrBelowTerrain(this.position, gameState.terrainMesh)) {
+                this.isExploded = true;
+                return;
+            }
             for (let i = 0; i < gameState.terrainMesh.length - 2; i++) {
                 let point = gameState.terrainMesh[i];
                 let nextPoint = gameState.terrainMesh[i + 1];
@@ -34,31 +38,28 @@ export class Missile {
         }
     }
 
-    private isCircleOnOrBelowLineSegment(center: Vector, radius: number, start: Vector, end: Vector): boolean {
-        // Helper function to find the y-coordinate of a point on the line segment at a given x
-        function getYOnLineSegment(x: number, start: Vector, end: Vector): number {
-            if (start.x === end.x) {
-                // Vertical line segment
-                return Math.min(start.y, end.y);
+    private isInsideOrBelowTerrain(position: Vector, terrainMesh: Vector[]): boolean {
+        for (let i = 0; i < terrainMesh.length - 1; i++) {
+            const start = terrainMesh[i];
+            const end = terrainMesh[i + 1];
+            if (position.x >= start.x && position.x <= end.x && position.y >= start.y) {
+                return true;
             }
-
-            const slope = (end.y - start.y) / (end.x - start.x);
-            const y = slope * (x - start.x) + start.y;
-            return y;
         }
-
-        // Check if circle's center lies within the extended line segment's horizontal range
-        const minX = Math.min(start.x, end.x) - radius;
-        const maxX = Math.max(start.x, end.x) + radius;
-
-        if (center.x < minX || center.x > maxX) {
-            // Circle's center is outside the extended line segment's horizontal range
-            return false;
-        }
-
-        const yOnLineSegment = getYOnLineSegment(center.x, start, end);
-
-        // Check if the circle is on or below the line segment considering positive y downwards
-        return (center.y + radius) >= yOnLineSegment;
+        return false;
     }
+
+    private isCircleOnOrBelowLineSegment(center: Vector, radius: number, start: Vector, end: Vector): boolean {
+        const lineVector = Vector.subtract(end, start);
+        const pointVector = Vector.subtract(center, start);
+        const lineLengthSquared = lineVector.magnitudeSquared();
+        const dotProduct = Vector.dot(pointVector, lineVector);
+        const t = Math.max(0, Math.min(1, dotProduct / lineLengthSquared));
+
+        const closestPointOnLine = Vector.add(start, Vector.multiply(lineVector, t));
+        const distanceSquared = Vector.distanceSquared(center, closestPointOnLine);
+
+        return distanceSquared <= radius ** 2;
+    }
+
 }

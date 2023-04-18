@@ -13,8 +13,9 @@ export class GameState {
     missiles: Missile[] = [];
     lastUpdate: number = 0;
     terrainMesh: Vector[] = [];
-    isSand: boolean = true;
+    isSand: boolean = false;
     worldWidth: number = 1500;
     worldHeight: number = 1000;
     gravity: Vector = new Vector(0, 450);
+    currentPlayerIndex: number = 0;
 }

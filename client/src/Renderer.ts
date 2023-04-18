@@ -65,9 +65,11 @@ export class Renderer {
         ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.renderGradientBackground(ctx, gameState);
         this.renderSun(ctx);
+        this.renderClouds(ctx, gameState);
         this.renderTerrainMesh(ctx, gameState);
         this.renderPlayers(ctx, gameState);
         this.renderHelpText(ctx, gameState);
+        this.renderPlayerInfo(ctx, gameState);
     }
 
     private adjustToCamera(ctx: CanvasRenderingContext2D) {
@@ -100,21 +102,25 @@ export class Renderer {
         ctx.restore();
     }
 
-    private renderClouds(ctx: CanvasRenderingContext2D) {
+    private renderClouds(ctx: CanvasRenderingContext2D, gameState: GameState) {
         ctx.save();
+        this.adjustToCamera(ctx);
 
         // draw circles to form clouds
         ctx.fillStyle = "#ffffff";
 
-        const mulberryRandom = MathUtils.mulberry32(1234);
+        const mulberryRandom = MathUtils.mulberry32(2);
 
-        for (let i = 0; i < 10; i++) {
-            let x = mulberryRandom() * this.canvas.width;
-            let y = mulberryRandom() * this.canvas.height;
-            let radius = mulberryRandom() * 100;
-            ctx.beginPath();
-            ctx.arc(x, y, radius, 0, 2 * Math.PI);
-            ctx.fill();
+        for (let i = 0; i < 3; i++) {
+            let x = mulberryRandom() * gameState.worldWidth
+            let y = mulberryRandom() * gameState.worldHeight;
+
+            for (let j = 0; j < mulberryRandom() * 2 + 3; j++) {
+                let radius = mulberryRandom() * 100;
+                ctx.beginPath();
+                ctx.arc(x + mulberryRandom() * 100 - 50, y + mulberryRandom() * 100 - 50, radius, 0, 2 * Math.PI);
+                ctx.fill();
+            }
         }
 
         ctx.restore();
@@ -126,8 +132,13 @@ export class Renderer {
         ctx.save();
         this.adjustToCamera(ctx);
 
-        // darker beige
-        ctx.fillStyle = "#d2b48c";
+        if (gameState.isSand) {
+            // darker beige
+            ctx.fillStyle = "#d2b48c";
+        } else {
+            // dark grey
+            ctx.fillStyle = "#222";
+        }
         ctx.beginPath();
         ctx.moveTo(terrainMesh[0].x, terrainMesh[0].y);
         for (let i = 1; i < terrainMesh.length; i++) {
@@ -158,9 +169,10 @@ export class Renderer {
             let R = (1 - player.health / 100) * 255;
             let G = 255 - R;
             ctx.fillStyle = `rgb(${R}, ${G}, 0)`;
-            ctx.fillRect(0, -10, player.hitBox.x, 5);
+            ctx.fillRect(-player.hitBox.x / 2, -10, player.hitBox.x * 2, 5);
 
             // draw player canon
+            ctx.save();
             ctx.translate(player.hitBox.x / 2, player.hitBox.y / 2);
             ctx.rotate(player.facingAngle);
             ctx.fillStyle = '#000000';
@@ -168,6 +180,14 @@ export class Renderer {
             ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
             ctx.lineWidth = 1;
             ctx.strokeRect(0, -2.5, player.canonLength, 5);
+            ctx.restore();
+
+            // draw player name
+            ctx.translate(player.hitBox.x / 2, player.hitBox.y / 2);
+            ctx.fillStyle = '#000000';
+            ctx.font = "20px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText(player.name, 0, -30);
 
             ctx.restore();
         }
@@ -219,13 +239,39 @@ export class Renderer {
         const textLines = [
             "Press 'a' or 'd' to move left and right.",
             "Press 'w' or 's' to increase/decrease power.",
-            "Press 'q' or 'e' to change angle.",
+            "Press 'q' or 'e' to finely adjust angle (hold [shift] to increase speed).",
             "Press 'space' to fire.",
             "Press '-' or '=' to zoom in and out (or scroll with mouse wheel).",
         ]
         const y = gameState.worldHeight - 30 * textLines.length - 10;
         for (let i = 0; i < textLines.length; i++) {
             ctx.fillText(textLines[i], 10, y + 30 * i);
+        }
+
+        ctx.restore();
+    }
+
+    private renderPlayerInfo(ctx: CanvasRenderingContext2D, gameState: GameState) {
+        ctx.save();
+        this.adjustToCamera(ctx);
+
+        const player = gameState.players[gameState.currentPlayerIndex];
+        if (!player) return;
+
+        ctx.font = "20px Arial";
+        ctx.fillStyle = "#000000";
+        ctx.strokeStyle = "rgba(255, 255, 255, 1)";
+        ctx.lineWidth = 0.1;
+        let angleDegrees = player.facingAngle * 180 / Math.PI - 180;
+        const textLines = [
+            `Player ${gameState.currentPlayerIndex + 1} (${player.color})`,
+            `Angle: ${angleDegrees.toFixed(2)}`,
+            `Power: ${player.power.toFixed(2)}`,
+        ]
+        const y = gameState.worldHeight - 30 * textLines.length - 10;
+        for (let i = 0; i < textLines.length; i++) {
+            //ctx.strokeText(textLines[i], gameState.worldWidth - 10 - ctx.measureText(textLines[i]).width, y + 30 * i);
+            ctx.fillText(textLines[i], gameState.worldWidth - 10 - ctx.measureText(textLines[i]).width, y + 30 * i);
         }
 
         ctx.restore();

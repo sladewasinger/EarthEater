@@ -68,4 +68,18 @@ export class Vector {
         if (t > 1) return Vector.distance(v, p2);
         return Vector.distance(v, new Vector(p1.x + t * (p2.x - p1.x), p1.y + t * (p2.y - p1.y)));
     }
+
+    magnitudeSquared() {
+        return this.x ** 2 + this.y ** 2;
+    }
+
+    static distanceSquared(a: Vector, b: Vector): number {
+        const dx = a.x - b.x;
+        const dy = a.y - b.y;
+        return dx ** 2 + dy ** 2;
+    }
+
+    static dot(a: Vector, b: Vector) {
+        return a.x * b.x + a.y * b.y;
+    }
 }
