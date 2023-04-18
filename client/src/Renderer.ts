@@ -220,6 +220,8 @@ export class Renderer {
             "Press 'a' or 'd' to move left and right.",
             "Press 'w' or 's' to increase/decrease power.",
             "Press 'q' or 'e' to change angle.",
+            "Press 'space' to fire.",
+            "Press '-' or '=' to zoom in and out (or scroll with mouse wheel).",
         ]
         const y = gameState.worldHeight - 30 * textLines.length - 10;
         for (let i = 0; i < textLines.length; i++) {

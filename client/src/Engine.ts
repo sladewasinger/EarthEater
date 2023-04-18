@@ -14,6 +14,7 @@ export class EngineState {
     maxMissileTimeMs: number = 5000;
     maxCanonVelocity: number = 1000;
     minCanonVelocity: number = 50;
+    debug: boolean = false;
 }
 
 export class Engine {
@@ -37,6 +38,7 @@ export class Engine {
 
     onKeyUp(e: KeyboardEvent): any {
         this.gameState.inputs[e.key] = false;
+        this.handleImmediateInput(e.key);
     }
 
     onKeyDown(e: KeyboardEvent): any {
@@ -73,7 +75,6 @@ export class Engine {
         );
     }
 
-
     public update() {
         const now = Date.now();
         const dt = Math.min(now - this.gameState.lastUpdate, 1000 / 20);
@@ -104,9 +105,9 @@ export class Engine {
         this.handlePlayerInput(dt);
 
         // create explosion on mouse click
-        if (this.mouse.left && !this.engineState.fireDebounce) {
+        if (this.engineState.debug && this.mouse.left && !this.engineState.fireDebounce) {
             let mouseWorldPos = this.renderer.getWorldPosition(this.mouse.position);
-            this.createExplosion(mouseWorldPos);
+            this.createExplosion(mouseWorldPos, 50, 100);
         }
 
         // update explosions
@@ -159,28 +160,28 @@ export class Engine {
             missile.update(dt, this.gameState);
             if (missile.isExploded || missile.elapsedTime > this.engineState.maxMissileTimeMs) {
                 this.gameState.missiles.splice(this.gameState.missiles.indexOf(missile), 1);
-                this.createExplosion(missile.position);
+                this.createExplosion(missile.position, missile.explosionRadius, missile.damage);
             }
             this.renderer.renderCircle(missile.position, missile.radius, 'rgba(0, 0, 0, 1)');
         }
 
-        if (this.myPlayer) {
+        if (this.engineState.debug && this.myPlayer) {
             this.renderer.renderParabolicTrajectory(
                 this.myPlayer.getCanonTipPosition(),
                 this.myPlayer.getCanonTipVelocity(),
-                this.gameState, 5, 'rgba(0, 0, 0, 0.5)');
+                this.gameState, 50, 'rgba(0, 0, 0, 0.5)');
         }
 
         this.gameState.lastUpdate = now;
     }
 
-    private createExplosion(pos: Vector) {
-        let explosion = new Explosion(pos, 50, 1000);
+    private createExplosion(pos: Vector, radius: number, damage: number) {
+        let explosion = new Explosion(pos, radius, 1000, damage);
         this.gameState.explosions.push(explosion);
     }
 
     private fireMissile(pos: Vector, velocity: Vector) {
-        let missile = new Missile(pos, velocity, 5);
+        let missile = new Missile(pos, velocity, 5, 20, 25);
         this.gameState.missiles.push(missile);
     }
 
@@ -258,6 +259,28 @@ export class Engine {
 
         if (this.gameState.inputs['0']) {
             this.centerCameraOnScreen();
+        }
+    }
+
+    toggleDebug() {
+        this.engineState.debug = !this.engineState.debug;
+    }
+
+    handleImmediateInput(key: string) {
+        if (key === '0') {
+            this.centerCameraOnScreen();
+        }
+
+        if (key === '1') {
+            this.toggleDebug();
+        }
+
+        if (key === '-') {
+            this.renderer.zoom(this.renderer.camera.zoom - 0.1);
+        }
+
+        if (key === '+' || key === '=') {
+            this.renderer.zoom(this.renderer.camera.zoom + 0.1);
         }
     }
 

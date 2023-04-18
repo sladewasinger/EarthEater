@@ -8,7 +8,7 @@ export class Missile {
     public initialPosition: Vector;
     public initialVelocity: Vector;
 
-    public constructor(public position: Vector, public velocity: Vector, public radius: number) {
+    public constructor(public position: Vector, public velocity: Vector, public radius: number, public explosionRadius: number, public damage: number) {
         this.initialPosition = position.clone();
         this.initialVelocity = velocity.clone();
     }
