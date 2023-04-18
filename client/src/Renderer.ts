@@ -137,7 +137,7 @@ export class Renderer {
             ctx.fillStyle = "#d2b48c";
         } else {
             // dark grey
-            ctx.fillStyle = "#222";
+            ctx.fillStyle = "#777";
         }
         ctx.beginPath();
         ctx.moveTo(terrainMesh[0].x, terrainMesh[0].y);
@@ -146,6 +146,7 @@ export class Renderer {
         }
         ctx.closePath();
         ctx.fill();
+        ctx.stroke();
 
         // draw rect around world bounds
         ctx.strokeStyle = "#000000";

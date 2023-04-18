@@ -53,8 +53,10 @@ export class Camera {
 
         window.addEventListener('mousemove', (e) => {
             if (this.panning) {
-                let dx = e.clientX - this.panStart.x;
-                let dy = e.clientY - this.panStart.y;
+                // account for zoom
+
+                let dx = (e.clientX - this.panStart.x) / this.zoom;
+                let dy = (e.clientY - this.panStart.y) / this.zoom;
                 this.panStart.x = e.clientX;
                 this.panStart.y = e.clientY;
                 this.x -= dx * this.panSpeed;
