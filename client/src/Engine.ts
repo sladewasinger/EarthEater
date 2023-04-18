@@ -175,7 +175,7 @@ export class Engine {
                 this.gameState.missiles.splice(this.gameState.missiles.indexOf(missile), 1);
                 this.createExplosion(missile.position, missile.explosionRadius, missile.damage);
             }
-            this.renderer.renderCircle(missile.position, missile.radius, 'rgba(0, 0, 0, 1)', 'rgba(255, 0, 0, 0.5)');
+            this.renderer.renderMissile(missile);
         }
 
         if (this.engineState.debug && this.myPlayer) {

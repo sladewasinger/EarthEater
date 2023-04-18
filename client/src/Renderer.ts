@@ -67,7 +67,7 @@ export class Renderer {
 
         ctx.imageSmoothingEnabled = false;
 
-        this.timeOfDay = (gameState.frame * 2) % 24000 + 0;
+        this.timeOfDay = (gameState.frame * 5) % 24000 + 0;
 
         // Clear the canvas
         ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -465,6 +465,15 @@ export class Renderer {
         }
 
         ctx.restore();
+    }
+
+    public renderMissile(missile: Missile) {
+        if (this.timeOfDay > 6000 && this.timeOfDay < 20600) {
+            this.renderCircle(missile.position, missile.radius, 'black', 'white');
+        }
+        else {
+            this.renderCircle(missile.position, missile.radius, 'white', 'black');
+        }
     }
 
     public renderRect(pos: Vector, size: Vector, color: string) {
