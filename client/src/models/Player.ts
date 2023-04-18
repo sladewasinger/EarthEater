@@ -7,12 +7,13 @@ export class Player {
     hitBox: Vector = new Vector(25, 15);
     health: number = 100;
     color: string = '#00ff00';
-    facingAngle: number = Math.PI;
+    facingAngle: number = 3 * Math.PI / 2;
     moveDebounce: boolean = false;
     moveFrameDelay: number = 10;
     lastMoveFrame: number = 0;
     canonLength: number = 20;
     power: number = 500;
+    exploded: boolean = false;
 
     constructor(id: string, name: string) {
         this.id = id;

@@ -5,11 +5,17 @@ import { GameState } from "./models/GameState";
 import { MathUtils } from "./models/MathUtils";
 import { Missile } from "./models/Missile";
 
+class Cloud {
+    constructor(public position: Vector, public radius: number) { }
+}
+
 export class Renderer {
     canvas: HTMLCanvasElement;
     camera: Camera = new Camera();
     images: { [key: string]: HTMLImageElement } = {};
     explosions: Explosion[] = [];
+    clouds: Cloud[] = [];
+    timeOfDay: number = 0;
 
     constructor() {
         this.canvas = document.createElement('canvas');
@@ -55,21 +61,23 @@ export class Renderer {
         });
     }
 
-    public render(gameState: GameState) {
+    public render(gameState: GameState, dt: number) {
         let ctx = this.canvas.getContext('2d');
         if (!ctx) throw new Error('Could not get canvas context');
 
         ctx.imageSmoothingEnabled = false;
 
+        this.timeOfDay = (gameState.frame * 2) % 24000 + 0;
+
         // Clear the canvas
         ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        this.renderGradientBackground(ctx, gameState);
-        this.renderSun(ctx);
-        this.renderClouds(ctx, gameState);
+        this.renderSky(ctx, gameState);
+        this.renderClouds(ctx, gameState, dt);
         this.renderTerrainMesh(ctx, gameState);
         this.renderPlayers(ctx, gameState);
         this.renderHelpText(ctx, gameState);
         this.renderPlayerInfo(ctx, gameState);
+        this.renderDebugInfo(ctx, gameState);
     }
 
     private adjustToCamera(ctx: CanvasRenderingContext2D) {
@@ -77,54 +85,165 @@ export class Renderer {
         ctx.translate(-this.camera.x, -this.camera.y);
     }
 
-    private renderGradientBackground(ctx: CanvasRenderingContext2D, gameState: GameState) {
+    private renderSky(ctx: CanvasRenderingContext2D, gameState: GameState) {
         ctx.save();
         this.adjustToCamera(ctx);
 
+        // render sky
         let grd = ctx.createLinearGradient(0, 0, 0, gameState.worldHeight);
-        grd.addColorStop(0, "#8ED6FF");
-        grd.addColorStop(1, "#004CB3");
+        // gradient colors based on time of day (frame)
+
+        type Color = [number, number, number];
+        interface TimeToColors {
+            [time: number]: [Color, Color];
+        }
+
+        function lerp(a: number, b: number, t: number) {
+            return a + (b - a) * t;
+        }
+
+        function mixColors(color1: Color, color2: Color, t: number) {
+            return [
+                lerp(color1[0], color2[0], t),
+                lerp(color1[1], color2[1], t),
+                lerp(color1[2], color2[2], t),
+            ];
+        }
+
+        // Gradient colors based on time of day (frame)
+
+        // Sun's angle based on game frame
+        let sunAngle = (2 * Math.PI * this.timeOfDay) / 24000;
+
+        const night = <Color>[0, 0, 0];
+        const dawn = <Color>[255, 140, 0];
+        const day = <Color>[135, 206, 235];
+        const dusk = <Color>[238, 130, 238];
+
+        const timeToColors: TimeToColors = {
+            0: [night, night],
+            5000: [night, dawn],
+            7200: [dawn, dawn],
+            8000: [dawn, day],
+            9000: [day, day],
+            17800: [day, dusk],
+            20600: [dusk, night],
+            24000: [night, night],
+        };
+
+        let prevTime = 0;
+        let prevColors = timeToColors[prevTime];
+        let nextTime = 0;
+        let nextColors = prevColors;
+
+        for (const timeStr in timeToColors) {
+            const time = parseFloat(timeStr);
+            if (this.timeOfDay >= prevTime && this.timeOfDay < time) {
+                nextTime = time;
+                nextColors = timeToColors[time];
+                break;
+            }
+            prevTime = time;
+            prevColors = timeToColors[time];
+        }
+
+        let t = (this.timeOfDay - prevTime) / (nextTime - prevTime);
+        let color1 = mixColors(prevColors[0], nextColors[0], t);
+        let color2 = mixColors(prevColors[1], nextColors[1], t);
+
+        grd.addColorStop(0, `rgb(${Math.round(color1[0])}, ${Math.round(color1[1])}, ${Math.round(color1[2])})`);
+        grd.addColorStop(1, `rgb(${Math.round(color2[0])}, ${Math.round(color2[1])}, ${Math.round(color2[2])})`);
+
         ctx.fillStyle = grd;
         ctx.fillRect(0, 0, gameState.worldWidth, gameState.worldHeight);
 
         ctx.restore();
-    }
 
-    private renderSun(ctx: CanvasRenderingContext2D) {
+        // render sun
         ctx.save();
         this.adjustToCamera(ctx);
+
+        // sun follows arc based on game frame
+        let sunX = gameState.worldWidth / 2 - Math.sin(sunAngle) * 500;
+        let sunY = gameState.worldHeight / 2 + Math.cos(sunAngle) * 500;
 
         ctx.fillStyle = "#ffff00";
         ctx.beginPath();
-        ctx.arc(610, 180, 100, 0, 2 * Math.PI);
+        ctx.arc(sunX, sunY, 100, 0, 2 * Math.PI);
         ctx.fill();
 
-        ctx.restore();
-    }
-
-    private renderClouds(ctx: CanvasRenderingContext2D, gameState: GameState) {
-        ctx.save();
-        this.adjustToCamera(ctx);
-
-        // draw circles to form clouds
-        ctx.fillStyle = "#ffffff";
-
-        const mulberryRandom = MathUtils.mulberry32(2);
-
-        for (let i = 0; i < 3; i++) {
-            let x = mulberryRandom() * gameState.worldWidth
-            let y = mulberryRandom() * gameState.worldHeight;
-
-            for (let j = 0; j < mulberryRandom() * 2 + 3; j++) {
-                let radius = mulberryRandom() * 100;
-                ctx.beginPath();
-                ctx.arc(x + mulberryRandom() * 100 - 50, y + mulberryRandom() * 100 - 50, radius, 0, 2 * Math.PI);
-                ctx.fill();
+        if (this.timeOfDay < 5000 || this.timeOfDay > 20600) {
+            // draw stars
+            ctx.fillStyle = "#ffffff";
+            const mulberry32 = MathUtils.mulberry32(1234);
+            for (let i = 0; i < 100; i++) {
+                let x = mulberry32() * gameState.worldWidth;
+                let y = mulberry32() * gameState.worldHeight;
+                let size = mulberry32() * 2;
+                ctx.fillRect(x, y, size, size);
             }
         }
 
         ctx.restore();
     }
+
+    private setupClouds(gameState: GameState) {
+        // setup clouds
+        let random = MathUtils.mulberry32(5);
+        for (let i = 0; i < 10; i++) {
+            let relativeX = random() * gameState.worldWidth;
+            let relativeY = random() * gameState.worldHeight;
+            for (let j = 0; j < random() * 3 + 2; j++) {
+                let size = random() * 50 + 50;
+                let x = relativeX + random() * 100 - 50;
+                let y = relativeY + random() * 100 - 50;
+                this.clouds.push(new Cloud(new Vector(x, y), size));
+            }
+        }
+    }
+
+    private renderClouds(ctx: CanvasRenderingContext2D, gameState: GameState, dt: number) {
+        ctx.save();
+        this.adjustToCamera(ctx);
+
+        // create a clipping region based on the canvas dimensions
+        ctx.beginPath();
+        ctx.rect(0, 0, gameState.worldWidth, gameState.worldHeight);
+        ctx.clip();
+
+        // draw circles to form clouds
+        ctx.fillStyle = "#ffffff";
+
+        if (this.clouds.length === 0) {
+            this.setupClouds(gameState);
+        }
+
+        for (let cloud of this.clouds) {
+            // move clouds
+            cloud.position.x += gameState.wind.x * dt / 1000;
+            cloud.position.y += gameState.wind.y * dt / 1000;
+
+            if (cloud.position.x + cloud.radius < 0) {
+                cloud.position.x = gameState.worldWidth;
+            } else if (cloud.position.x - cloud.radius > gameState.worldWidth) {
+                cloud.position.x = -cloud.radius;
+            }
+
+            if (cloud.position.y < 0) {
+                cloud.position.y = gameState.worldHeight;
+            } else if (cloud.position.y > gameState.worldHeight) {
+                cloud.position.y = 0;
+            }
+
+            // draw cloud
+            ctx.beginPath();
+            ctx.arc(cloud.position.x, cloud.position.y, cloud.radius, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+
+        ctx.restore();
+    }
+
 
     private renderTerrainMesh(ctx: CanvasRenderingContext2D, gameState: GameState) {
         let terrainMesh = gameState.terrainMesh;
@@ -165,42 +284,68 @@ export class Renderer {
             ctx.translate(player.position.x, player.position.y);
             ctx.fillStyle = player.color;
             ctx.fillRect(0, 0, player.hitBox.x, player.hitBox.y);
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(0, 0, player.hitBox.x, player.hitBox.y);
 
             // draw player health bar
             let R = (1 - player.health / 100) * 255;
             let G = 255 - R;
 
-            ctx.fillStyle = "white";
-            ctx.fillRect(-player.hitBox.x / 2, -10, player.hitBox.x * 2, 5);
-            ctx.strokeStyle = 'black';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(-player.hitBox.x / 2, -10, player.hitBox.x * 2, 5);
-            ctx.fillStyle = `rgb(${R}, ${G}, 0)`;
-            ctx.fillRect(-player.hitBox.x / 2, -10, player.hitBox.x * 2 * (player.health / 100), 5);
+            if (!player.dead) {
+                ctx.fillStyle = "white";
+                ctx.fillRect(-player.hitBox.x / 2, -10, player.hitBox.x * 2, 5);
+                ctx.strokeStyle = 'black';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(-player.hitBox.x / 2, -10, player.hitBox.x * 2, 5);
+                ctx.fillStyle = `rgb(${R}, ${G}, 0)`;
+                ctx.fillRect(-player.hitBox.x / 2, -10, player.hitBox.x * 2 * (player.health / 100), 5);
+            } else {
+                // draw x over player
+                ctx.save();
+                ctx.translate(player.hitBox.x / 2, player.hitBox.y / 2);
 
-            // draw player canon
-            ctx.save();
-            ctx.translate(player.hitBox.x / 2, player.hitBox.y / 2);
-            ctx.rotate(player.facingAngle);
-            ctx.fillStyle = '#000000';
-            ctx.fillRect(0, -2.5, player.canonLength, 5);
-            ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
-            ctx.lineWidth = 1;
-            ctx.strokeRect(0, -2.5, player.canonLength, 5);
-            ctx.restore();
+                ctx.strokeStyle = 'black';
+                ctx.lineWidth = 5;
+                ctx.beginPath();
+                ctx.moveTo(-player.hitBox.x / 2, -player.hitBox.y / 2);
+                ctx.lineTo(player.hitBox.x / 2, player.hitBox.y / 2);
+                ctx.moveTo(player.hitBox.x / 2, -player.hitBox.y / 2);
+                ctx.lineTo(-player.hitBox.x / 2, player.hitBox.y / 2);
+                ctx.stroke();
+
+                ctx.restore();
+            }
+
+            if (!player.dead) {
+                // draw player canon
+                ctx.save();
+                ctx.translate(player.hitBox.x / 2, player.hitBox.y / 2);
+                ctx.rotate(player.facingAngle);
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(0, -2.5, player.canonLength, 5);
+                ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
+                ctx.lineWidth = 1;
+                ctx.strokeRect(0, -2.5, player.canonLength, 5);
+                ctx.restore();
+            }
 
             // draw player name
-            ctx.translate(player.hitBox.x / 2, player.hitBox.y / 2);
+            if (player.dead) {
+                ctx.translate(player.hitBox.x / 2, player.hitBox.y + 30);
+            } else {
+                ctx.translate(player.hitBox.x / 2, player.hitBox.y / 2 - 30);
+            }
             ctx.fillStyle = '#000000';
             ctx.font = "20px Arial";
             ctx.textAlign = "center";
-            ctx.fillText(player.name, 0, -30);
+            ctx.fillText(player.name, 0, 0);
 
             ctx.restore();
         }
     }
 
-    public renderParabolicTrajectory(initialPosition: Vector, initialVelocity: Vector, gameState: GameState, numPoints: number = 100, color: string = 'rgba(255, 0, 0, 0.5)') {
+    public renderParabolicTrajectory(initialPosition: Vector, initialVelocity: Vector, gameState: GameState, numPoints: number = 100) {
         const ctx = this.canvas.getContext('2d');
         if (!ctx) throw new Error('Canvas context not found');
 
@@ -216,7 +361,6 @@ export class Renderer {
 
         ctx.beginPath();
         ctx.moveTo(position.x, position.y);
-        ctx.strokeStyle = color;
         ctx.lineWidth = 2;
 
         // Draw the parabolic trajectory by iterating through the points
@@ -229,11 +373,29 @@ export class Renderer {
             newPosition.y += 0.5 * gameState.gravity.y * accumulatedTime * accumulatedTime;
 
             // Draw line to the new position
-            ctx.setLineDash([5, 5]);
             ctx.lineTo(newPosition.x, newPosition.y);
         }
 
+        ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+        ctx.setLineDash([5, 5]);
+        ctx.lineDashOffset = 5;
         ctx.stroke();
+
+        ctx.strokeStyle = 'black';
+        ctx.setLineDash([5, 5]);
+        ctx.lineDashOffset = 0;
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    private renderDebugInfo(ctx: CanvasRenderingContext2D, gameState: GameState) {
+        ctx.save();
+        this.adjustToCamera(ctx);
+
+        ctx.font = "20px Arial";
+        ctx.fillStyle = "#000000";
+        ctx.fillText(`Frame: ${gameState.frame}`, 10, 30);
+
         ctx.restore();
     }
 
@@ -284,7 +446,7 @@ export class Renderer {
         ctx.restore();
     }
 
-    public renderCircle(position: Vector, radius: number, color: string) {
+    public renderCircle(position: Vector, radius: number, color: string, strokeColor?: string | undefined) {
         const ctx = this.canvas.getContext('2d');
         if (!ctx) throw new Error('Canvas context not found');
 
@@ -295,6 +457,12 @@ export class Renderer {
         ctx.beginPath();
         ctx.arc(position.x, position.y, radius, 0, 2 * Math.PI);
         ctx.fill();
+
+        if (strokeColor != undefined) {
+            ctx.strokeStyle = strokeColor;
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
 
         ctx.restore();
     }

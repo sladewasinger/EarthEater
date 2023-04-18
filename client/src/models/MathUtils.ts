@@ -1,3 +1,4 @@
+import { Vector } from "./Vector";
 
 export class MathUtils {
     static snapToNearestAngle(angle: number, subAngle: number) {
@@ -19,5 +20,10 @@ export class MathUtils {
 
     static clamp(n: number, min: number, max: number): number {
         return Math.min(Math.max(n, min), max);
+    }
+
+    static circleCollidesWithBox(center: Vector, radius: number, boxPosition: Vector, boxSize: Vector) {
+        let closestPoint = new Vector(MathUtils.clamp(center.x, boxPosition.x, boxPosition.x + boxSize.x), MathUtils.clamp(center.y, boxPosition.y, boxPosition.y + boxSize.y));
+        return Vector.distance(center, closestPoint) < radius;
     }
 }

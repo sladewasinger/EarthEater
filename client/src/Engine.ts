@@ -136,7 +136,7 @@ export class Engine {
 
                 // damage players
                 for (let player of this.gameState.players) {
-                    if (Vector.distance(player.position, explosion.position) <= explosion.radius) {
+                    if (MathUtils.circleCollidesWithBox(explosionPos, explosionRadius, player.position, player.hitBox)) {
                         player.health -= explosion.damage;
                     }
                 }
@@ -150,9 +150,10 @@ export class Engine {
 
         // blow up dead players
         for (let player of this.gameState.players) {
-            if (player.health <= 0) {
+            if (player.dead && !player.exploded) {
+                player.exploded = true;
                 this.createExplosion(player.position, 100, 100);
-                this.gameState.players.splice(this.gameState.players.indexOf(player), 1);
+                //this.gameState.players.splice(this.gameState.players.indexOf(player), 1);
             }
         }
 
@@ -160,7 +161,7 @@ export class Engine {
             this.smoothTerrain();
         }
 
-        this.renderer.render(this.gameState);
+        this.renderer.render(this.gameState, dt);
 
         // render explosions
         for (let explosion of this.gameState.explosions) {
@@ -174,14 +175,15 @@ export class Engine {
                 this.gameState.missiles.splice(this.gameState.missiles.indexOf(missile), 1);
                 this.createExplosion(missile.position, missile.explosionRadius, missile.damage);
             }
-            this.renderer.renderCircle(missile.position, missile.radius, 'rgba(0, 0, 0, 1)');
+            this.renderer.renderCircle(missile.position, missile.radius, 'rgba(0, 0, 0, 1)', 'rgba(255, 0, 0, 0.5)');
         }
 
         if (this.engineState.debug && this.myPlayer) {
             this.renderer.renderParabolicTrajectory(
                 this.myPlayer.getCanonTipPosition(),
                 this.myPlayer.getCanonTipVelocity(),
-                this.gameState, 100, 'rgba(0, 0, 0, 0.5)');
+                this.gameState, 100
+            );
         }
 
         this.gameState.lastUpdate = now;
@@ -350,8 +352,6 @@ export class Engine {
                 //await this.sleep(1);
 
                 this.gameState.terrainMesh = points;
-                this.renderer.render(this.gameState);
-
             }
             displacement *= roughness;
         }

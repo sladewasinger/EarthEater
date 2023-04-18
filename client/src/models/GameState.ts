@@ -17,5 +17,6 @@ export class GameState {
     worldWidth: number = 1500;
     worldHeight: number = 1000;
     gravity: Vector = new Vector(0, 450);
+    wind: Vector = new Vector(10, 0);
     currentPlayerIndex: number = 0;
 }
