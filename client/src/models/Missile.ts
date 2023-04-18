@@ -27,6 +27,7 @@ export class Missile {
                 this.isExploded = true;
                 return;
             }
+
             for (let i = 0; i < gameState.terrainMesh.length - 2; i++) {
                 let point = gameState.terrainMesh[i];
                 let nextPoint = gameState.terrainMesh[i + 1];
@@ -39,7 +40,7 @@ export class Missile {
             // check for collision with players
             for (let i = 0; i < gameState.players.length; i++) {
                 let player = gameState.players[i];
-                if (i == gameState.currentPlayerIndex) {
+                if (i == gameState.currentPlayerIndex || player.isDead) {
                     // don't collide with self
                     continue;
                 }

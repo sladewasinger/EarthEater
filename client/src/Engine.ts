@@ -150,7 +150,7 @@ export class Engine {
 
         // blow up dead players
         for (let player of this.gameState.players) {
-            if (player.dead && !player.exploded) {
+            if (player.isDead && !player.exploded) {
                 player.exploded = true;
                 this.createExplosion(player.position, 100, 100);
                 //this.gameState.players.splice(this.gameState.players.indexOf(player), 1);

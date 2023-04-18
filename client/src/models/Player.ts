@@ -33,7 +33,7 @@ export class Player {
         return Vector.fromAngle(this.facingAngle, this.power);
     }
 
-    get dead() {
+    get isDead() {
         return this.health <= 0;
     }
 }

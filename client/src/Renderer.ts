@@ -298,7 +298,7 @@ export class Renderer {
             let R = (1 - player.health / 100) * 255;
             let G = 255 - R;
 
-            if (!player.dead) {
+            if (!player.isDead) {
                 ctx.fillStyle = "white";
                 ctx.fillRect(-player.hitBox.x / 2, -10, player.hitBox.x * 2, 5);
                 ctx.strokeStyle = 'black';
@@ -323,7 +323,7 @@ export class Renderer {
                 ctx.restore();
             }
 
-            if (!player.dead) {
+            if (!player.isDead) {
                 // draw player canon
                 ctx.save();
                 ctx.translate(player.hitBox.x / 2, player.hitBox.y / 2);
@@ -337,7 +337,7 @@ export class Renderer {
             }
 
             // draw player name
-            if (player.dead) {
+            if (player.isDead) {
                 ctx.translate(player.hitBox.x / 2, player.hitBox.y + 30);
             } else {
                 ctx.translate(player.hitBox.x / 2, player.hitBox.y / 2 - 30);
