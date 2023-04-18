@@ -374,8 +374,11 @@ export class Renderer {
             // Calculate the accumulated time
             const accumulatedTime = dt * (i + 1);
 
-            // Calculate the new position based on the original velocity and the accumulated time
-            const newPosition = Vector.add(position, Vector.multiply(velocity, accumulatedTime));
+            // Calculate the updated velocity with wind effect
+            const updatedVelocity = Vector.add(velocity, Vector.multiply(gameState.wind, 0.5 * accumulatedTime));
+
+            // Calculate the new position based on the updated velocity and the accumulated time
+            const newPosition = Vector.add(position, Vector.multiply(updatedVelocity, accumulatedTime));
             newPosition.y += 0.5 * gameState.gravity.y * accumulatedTime * accumulatedTime;
 
             // Draw line to the new position

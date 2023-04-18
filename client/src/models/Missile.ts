@@ -19,6 +19,9 @@ export class Missile {
             // apply gravity
             this.velocity = Vector.add(this.velocity, Vector.multiply(gameState.gravity, dt / 1000));
 
+            // apply wind
+            this.velocity = Vector.add(this.velocity, Vector.multiply(gameState.wind, dt / 1000));
+
             // update position
             this.position = Vector.add(this.position, Vector.multiply(this.velocity, dt / 1000));
 
