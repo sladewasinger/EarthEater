@@ -67,7 +67,7 @@ export class Renderer {
 
         ctx.imageSmoothingEnabled = false;
 
-        this.timeOfDay = (gameState.frame * 20) % 24000 + 0;
+        this.timeOfDay = (gameState.frame * 5) % 24000 + 0;
 
         // Clear the canvas
         ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
