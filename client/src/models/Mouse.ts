@@ -1,6 +1,6 @@
 import { Camera } from "../Camera";
 import { Renderer } from "../Renderer";
-import { Vector } from "../Vector";
+import { Vector } from "./Vector";
 import { GameState } from "./GameState";
 
 

@@ -1,12 +1,20 @@
-import { Dynamite } from "./Dynamite";
+import { Explosion } from "./Explosion";
+import { Missile } from "./Missile";
+import { Vector } from "./Vector";
 import { GridTile } from "./GridTile";
 import { Player } from "./Player";
 
 export class GameState {
     frame: number = 0;
     grid: GridTile[][] = [];
-    player: Player = new Player();
+    players: Player[] = [];
     inputs: { [key: string]: boolean } = {};
-    dynamites: Dynamite[] = [];
+    explosions: Explosion[] = [];
+    missiles: Missile[] = [];
     lastUpdate: number = 0;
+    terrainMesh: Vector[] = [];
+    isSand: boolean = true;
+    worldWidth: number = 1500;
+    worldHeight: number = 1000;
+    gravity: Vector = new Vector(0, 450);
 }

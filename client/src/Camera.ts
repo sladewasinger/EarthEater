@@ -1,4 +1,4 @@
-import { Vector } from "./Vector";
+import { Vector } from "./models/Vector";
 
 
 export class Camera {
@@ -11,13 +11,26 @@ export class Camera {
 
     constructor() {
         window.addEventListener('wheel', (e) => {
+            const previousZoom = this.zoom;
             if (e.deltaY < 0) {
-                this.zoom += 0.1;
+                this.zoom *= 1.1;
                 this.zoom = Math.min(this.zoom, 4);
             } else {
-                this.zoom -= 0.1;
+                this.zoom /= 1.1;
                 this.zoom = Math.max(this.zoom, 0.5);
             }
+
+            // Calculate the mouse position based on previous zoom
+            const mouseXWorld = e.clientX / previousZoom;
+            const mouseYWorld = e.clientY / previousZoom;
+
+            // Calculate the mouse position based on current zoom
+            const mouseXWorldNew = e.clientX / this.zoom;
+            const mouseYWorldNew = e.clientY / this.zoom;
+
+            // Update the camera position based on the new zoom level and mouse position
+            this.x += (mouseXWorld - mouseXWorldNew);
+            this.y += (mouseYWorld - mouseYWorldNew);
         });
 
         window.addEventListener('mousedown', (e) => {

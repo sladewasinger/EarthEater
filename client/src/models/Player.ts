@@ -1,66 +1,32 @@
-import { Camera } from "../Camera";
-import { Renderer } from "../Renderer";
-import { Vector } from "../Vector";
-import { GameState } from "./GameState";
-import { MathUtils } from "./MathUtils";
-import { Mouse } from "./Mouse";
+import { Vector } from "./Vector";
 
 export class Player {
+    id: string;
     position: Vector = new Vector(0, 0);
-    facingAngle: number = 0;
+    hitBox: Vector = new Vector(25, 15);
+    health: number = 100;
+    color: string = '#00ff00';
+    facingAngle: number = Math.PI;
     moveDebounce: boolean = false;
     moveFrameDelay: number = 10;
     lastMoveFrame: number = 0;
+    canonLength: number = 20;
+    canonPower: number = 500;
 
-    move(gameState: GameState, mouse: Mouse, renderer: Renderer) {
-        if (this.moveDebounce) {
-            return;
-        }
+    constructor(id: string) {
+        this.id = id;
+    }
 
-        let vector = new Vector(0, 0);
+    public getCanonTipPosition() {
+        // let pos = Vector.add(this.myPlayer.position.clone(), new Vector(this.myPlayer.hitBox.x / 2, this.myPlayer.hitBox.y / 2));
+        //     pos = Vector.add(pos, Vector.fromAngle(this.myPlayer.facingAngle, 10));
+        return new Vector(
+            this.position.x + this.hitBox.x / 2 + this.canonLength * Math.cos(this.facingAngle),
+            this.position.y + this.hitBox.y / 2 + this.canonLength * Math.sin(this.facingAngle)
+        )
+    }
 
-        if (gameState.inputs["w"]) {
-            vector.y -= 1;
-        }
-        if (gameState.inputs["s"]) {
-            vector.y += 1;
-        }
-        if (gameState.inputs["a"]) {
-            vector.x -= 1;
-        }
-        if (gameState.inputs["d"]) {
-            vector.x += 1;
-        }
-
-        const playerCenter = new Vector(
-            this.position.x + 0.5,
-            this.position.y + 0.5
-        );
-        const mouseWorldPosition = renderer.getWorldPosition(mouse.position);
-        const rawAngle = Vector.angleBetween(playerCenter, mouseWorldPosition);
-        // this.facingAngle = MathUtils.snapToNearestAngle(
-        //     rawAngle,
-        //     Math.PI / 4
-        // );
-        this.facingAngle = rawAngle;
-
-        // Print debug informationw
-        console.log('Player position:', this.position);
-        console.log('Player center:', playerCenter);
-        console.log('Mouse position:', mouseWorldPosition);
-        console.log('Raw angle:', rawAngle);
-        console.log('Facing angle:', this.facingAngle);
-
-        if (vector.x !== 0 || vector.y !== 0 && !this.moveDebounce) {
-            let nextPos = Vector.add(new Vector(this.position.x, this.position.y), vector);
-
-            vector = Vector.normalize(vector);
-
-            if (gameState.frame - this.lastMoveFrame > this.moveFrameDelay && gameState.grid[nextPos.y][nextPos.x].type === "air") {
-                this.lastMoveFrame = gameState.frame;
-                this.position.x = nextPos.x;
-                this.position.y = nextPos.y;
-            }
-        }
+    public getCanonTipVelocity() {
+        return Vector.fromAngle(this.facingAngle, this.canonPower);
     }
 }
