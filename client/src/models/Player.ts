@@ -31,4 +31,8 @@ export class Player {
     public getCanonTipVelocity() {
         return Vector.fromAngle(this.facingAngle, this.power);
     }
+
+    get dead() {
+        return this.health <= 0;
+    }
 }

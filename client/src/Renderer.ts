@@ -168,8 +168,14 @@ export class Renderer {
             // draw player health bar
             let R = (1 - player.health / 100) * 255;
             let G = 255 - R;
-            ctx.fillStyle = `rgb(${R}, ${G}, 0)`;
+
+            ctx.fillStyle = "white";
             ctx.fillRect(-player.hitBox.x / 2, -10, player.hitBox.x * 2, 5);
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(-player.hitBox.x / 2, -10, player.hitBox.x * 2, 5);
+            ctx.fillStyle = `rgb(${R}, ${G}, 0)`;
+            ctx.fillRect(-player.hitBox.x / 2, -10, player.hitBox.x * 2 * (player.health / 100), 5);
 
             // draw player canon
             ctx.save();

@@ -35,6 +35,21 @@ export class Missile {
                     break;
                 }
             }
+
+            // check for collision with players
+            for (let i = 0; i < gameState.players.length; i++) {
+                let player = gameState.players[i];
+                if (i == gameState.currentPlayerIndex) {
+                    // don't collide with self
+                    continue;
+                }
+
+                // check if circle overlaps square
+                if (this.isCircleOnOrBelowLineSegment(this.position, this.radius, player.position, new Vector(player.position.x + player.hitBox.x, player.position.y))) {
+                    this.isExploded = true;
+                    break;
+                }
+            }
         }
     }
 

@@ -52,9 +52,14 @@ export class Engine {
         }
         const player = new Player('id1', 'Player 1');
         player.color = 'blue';
+        player.position = new Vector(505, 300);
         this.gameState.players.push(player);
         this.engineState.myPlayerId = player.id;
-        this.myPlayer!.position = new Vector(505, 300);
+
+        const player2 = new Player('id2', 'Player 2');
+        player2.color = 'red';
+        player2.position = new Vector(800, 300);
+        this.gameState.players.push(player2);
 
         // zoom out canvas to fit screen
         if (this.renderer.canvas.width / this.gameState.worldWidth > this.renderer.canvas.height / this.gameState.worldHeight)
@@ -128,11 +133,26 @@ export class Engine {
                         point.y = Math.min(this.gameState.worldHeight, Math.max(point.y, yPos));
                     }
                 }
+
+                // damage players
+                for (let player of this.gameState.players) {
+                    if (Vector.distance(player.position, explosion.position) <= explosion.radius) {
+                        player.health -= explosion.damage;
+                    }
+                }
             }
 
             explosion.update(dt);
             if (explosion.timeLeftMs <= 0) {
                 this.gameState.explosions.splice(i, 1);
+            }
+        }
+
+        // blow up dead players
+        for (let player of this.gameState.players) {
+            if (player.health <= 0) {
+                this.createExplosion(player.position, 100, 100);
+                this.gameState.players.splice(this.gameState.players.indexOf(player), 1);
             }
         }
 
