@@ -161,7 +161,7 @@ export class Engine {
             this.renderer.renderParabolicTrajectory(
                 this.myPlayer.getCanonTipPosition(),
                 this.myPlayer.getCanonTipVelocity(),
-                this.gameState, 75, 'rgba(0, 0, 0, 0.5)');
+                this.gameState, 100, 'rgba(0, 0, 0, 0.5)');
         }
 
         this.gameState.lastUpdate = now;
@@ -234,13 +234,13 @@ export class Engine {
         let angleAdjustment = 0;
 
         if (this.gameState.inputs['q']) {
-            angleAdjustment = -0.003;
+            angleAdjustment = -0.001;
             if (this.gameState.inputs["shift"]) {
                 angleAdjustment *= 10;
             }
         }
         if (this.gameState.inputs['e']) {
-            angleAdjustment = 0.003;
+            angleAdjustment = 0.001;
             if (this.gameState.inputs["shift"]) {
                 angleAdjustment *= 10;
             }
