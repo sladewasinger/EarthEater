@@ -13,8 +13,8 @@ export class Vector {
         return new Vector(a.x - b.x, a.y - b.y);
     }
 
-    static multiply(a: Vector, b: Vector) {
-        return new Vector(a.x * b.x, a.y * b.y);
+    static multiply(a: Vector, n: number) {
+        return new Vector(a.x * n, a.y * n);
     }
 
     static divide(a: Vector, b: Vector) {
@@ -58,5 +58,14 @@ export class Vector {
 
     static lerp(v1: Vector, v2: Vector, amount: number) {
         return new Vector(v1.x + (v2.x - v1.x) * amount, v1.y + (v2.y - v1.y) * amount);
+    }
+
+    static distanceToLineSegment(v: Vector, p1: Vector, p2: Vector) {
+        let l2 = Vector.distance(p1, p2);
+        if (l2 == 0) return Vector.distance(v, p1);
+        let t = ((v.x - p1.x) * (p2.x - p1.x) + (v.y - p1.y) * (p2.y - p1.y)) / l2;
+        if (t < 0) return Vector.distance(v, p1);
+        if (t > 1) return Vector.distance(v, p2);
+        return Vector.distance(v, new Vector(p1.x + t * (p2.x - p1.x), p1.y + t * (p2.y - p1.y)));
     }
 }

@@ -1,7 +1,8 @@
 import { Camera } from "./Camera";
-import { Explosion } from "./Explosion";
-import { Vector } from "./Vector";
+import { Explosion } from "./models/Explosion";
+import { Vector } from "./models/Vector";
 import { GameState } from "./models/GameState";
+import { MathUtils } from "./models/MathUtils";
 
 export class Renderer {
     canvas: HTMLCanvasElement;
@@ -61,7 +62,9 @@ export class Renderer {
 
         // Clear the canvas
         ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        this.renderTerrainMesh(ctx, gameState.terrainMesh);
+        this.renderGradientBackground(ctx);
+        this.renderSun(ctx);
+        this.renderTerrainMesh(ctx, gameState);
         this.renderPLayers(ctx, gameState);
     }
 
@@ -70,11 +73,57 @@ export class Renderer {
         ctx.translate(-this.camera.x, -this.camera.y);
     }
 
-    private renderTerrainMesh(ctx: CanvasRenderingContext2D, terrainMesh: Vector[]) {
+    private renderGradientBackground(ctx: CanvasRenderingContext2D) {
+        ctx.save();
+
+        let grd = ctx.createLinearGradient(0, 0, 0, this.canvas.height);
+        grd.addColorStop(0, "#8ED6FF");
+        grd.addColorStop(1, "#004CB3");
+        ctx.fillStyle = grd;
+        ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        ctx.restore();
+    }
+
+    private renderSun(ctx: CanvasRenderingContext2D) {
+        ctx.save();
+
+        ctx.fillStyle = "#ffff00";
+        ctx.beginPath();
+        ctx.arc(610, 180, 100, 0, 2 * Math.PI);
+        ctx.fill();
+
+        ctx.restore();
+    }
+
+    private renderClouds(ctx: CanvasRenderingContext2D) {
+        ctx.save();
+
+        // draw circles to form clouds
+        ctx.fillStyle = "#ffffff";
+
+        const mulberryRandom = MathUtils.mulberry32(1234);
+
+        for (let i = 0; i < 10; i++) {
+            let x = mulberryRandom() * this.canvas.width;
+            let y = mulberryRandom() * this.canvas.height;
+            let radius = mulberryRandom() * 100;
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+
+        ctx.restore();
+    }
+
+    private renderTerrainMesh(ctx: CanvasRenderingContext2D, gameState: GameState) {
+        let terrainMesh = gameState.terrainMesh;
+
         ctx.save();
         this.adjustToCamera(ctx);
 
-        ctx.fillStyle = '#000000';
+        // darker beige
+        ctx.fillStyle = "#d2b48c";
         ctx.beginPath();
         ctx.moveTo(terrainMesh[0].x, terrainMesh[0].y);
         for (let i = 1; i < terrainMesh.length; i++) {
@@ -82,6 +131,11 @@ export class Renderer {
         }
         ctx.closePath();
         ctx.fill();
+
+        // draw rect around world bounds
+        ctx.strokeStyle = "#000000";
+        ctx.lineWidth = 5;
+        ctx.strokeRect(0, 0, gameState.worldWidth, gameState.worldHeight);
 
         ctx.restore();
     }
@@ -93,8 +147,20 @@ export class Renderer {
             this.adjustToCamera(ctx);
 
             ctx.translate(player.position.x, player.position.y);
-            ctx.fillStyle = '#00ff00';
+            ctx.fillStyle = player.color;
             ctx.fillRect(0, 0, player.hitBox.x, player.hitBox.y);
+
+            // draw player health bar
+            let R = (1 - player.health / 100) * 255;
+            let G = 255 - R;
+            ctx.fillStyle = `rgb(${R}, ${G}, 0)`;
+            ctx.fillRect(0, -10, player.hitBox.x, 5);
+
+            // draw player canon
+            ctx.translate(player.hitBox.x / 2, player.hitBox.y / 2);
+            ctx.rotate(player.facingAngle);
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(-5, -5, 20, 10);
 
             ctx.restore();
         }

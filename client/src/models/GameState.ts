@@ -1,5 +1,6 @@
-import { Explosion } from "../Explosion";
-import { Vector } from "../Vector";
+import { Explosion } from "./Explosion";
+import { Missile } from "./Missile";
+import { Vector } from "./Vector";
 import { GridTile } from "./GridTile";
 import { Player } from "./Player";
 
@@ -9,7 +10,11 @@ export class GameState {
     players: Player[] = [];
     inputs: { [key: string]: boolean } = {};
     explosions: Explosion[] = [];
+    missiles: Missile[] = [];
     lastUpdate: number = 0;
     terrainMesh: Vector[] = [];
-    isSand: boolean = false;
+    isSand: boolean = true;
+    worldWidth: number = 1500;
+    worldHeight: number = 1000;
+    gravity: Vector = new Vector(0, 450);
 }
