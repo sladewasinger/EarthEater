@@ -3,6 +3,7 @@ import { Explosion } from "./models/Explosion";
 import { Vector } from "./models/Vector";
 import { GameState } from "./models/GameState";
 import { MathUtils } from "./models/MathUtils";
+import { Missile } from "./models/Missile";
 
 export class Renderer {
     canvas: HTMLCanvasElement;
@@ -62,10 +63,10 @@ export class Renderer {
 
         // Clear the canvas
         ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        this.renderGradientBackground(ctx);
-        this.renderSun(ctx);
+        this.renderGradientBackground(ctx, gameState);
+        this.renderSun(ctx, gameState);
         this.renderTerrainMesh(ctx, gameState);
-        this.renderPLayers(ctx, gameState);
+        this.renderPlayers(ctx, gameState);
     }
 
     private adjustToCamera(ctx: CanvasRenderingContext2D) {
@@ -73,20 +74,22 @@ export class Renderer {
         ctx.translate(-this.camera.x, -this.camera.y);
     }
 
-    private renderGradientBackground(ctx: CanvasRenderingContext2D) {
+    private renderGradientBackground(ctx: CanvasRenderingContext2D, gameState: GameState) {
         ctx.save();
+        this.adjustToCamera(ctx);
 
-        let grd = ctx.createLinearGradient(0, 0, 0, this.canvas.height);
+        let grd = ctx.createLinearGradient(0, 0, 0, gameState.worldHeight);
         grd.addColorStop(0, "#8ED6FF");
         grd.addColorStop(1, "#004CB3");
         ctx.fillStyle = grd;
-        ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        ctx.fillRect(0, 0, gameState.worldWidth, gameState.worldHeight);
 
         ctx.restore();
     }
 
-    private renderSun(ctx: CanvasRenderingContext2D) {
+    private renderSun(ctx: CanvasRenderingContext2D, gameState: GameState) {
         ctx.save();
+        this.adjustToCamera(ctx);
 
         ctx.fillStyle = "#ffff00";
         ctx.beginPath();
@@ -140,7 +143,7 @@ export class Renderer {
         ctx.restore();
     }
 
-    private renderPLayers(ctx: CanvasRenderingContext2D, gameState: GameState) {
+    private renderPlayers(ctx: CanvasRenderingContext2D, gameState: GameState) {
         for (let player of gameState.players) {
             // draw tank as square
             ctx.save();
@@ -160,10 +163,50 @@ export class Renderer {
             ctx.translate(player.hitBox.x / 2, player.hitBox.y / 2);
             ctx.rotate(player.facingAngle);
             ctx.fillStyle = '#000000';
-            ctx.fillRect(-5, -5, 20, 10);
+            ctx.fillRect(0, -2.5, player.canonLength, 5);
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
+            ctx.lineWidth = 1;
+            ctx.strokeRect(0, -2.5, player.canonLength, 5);
 
             ctx.restore();
         }
+    }
+
+    public renderParabolicTrajectory(initialPosition: Vector, initialVelocity: Vector, gameState: GameState, numPoints: number = 100, color: string = 'rgba(255, 0, 0, 0.5)') {
+        const ctx = this.canvas.getContext('2d');
+        if (!ctx) throw new Error('Canvas context not found');
+
+        ctx.save();
+        this.adjustToCamera(ctx);
+
+        // Use a constant time step
+        const dt = 60 / 1000;
+
+        // Initial position and velocity of the missile
+        let position = initialPosition.clone();
+        let velocity = initialVelocity.clone();
+
+        ctx.beginPath();
+        ctx.moveTo(position.x, position.y);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+
+        // Draw the parabolic trajectory by iterating through the points
+        for (let i = 0; i < numPoints; i++) {
+            // Calculate the accumulated time
+            const accumulatedTime = dt * (i + 1);
+
+            // Calculate the new position based on the original velocity and the accumulated time
+            const newPosition = Vector.add(position, Vector.multiply(velocity, accumulatedTime));
+            newPosition.y += 0.5 * gameState.gravity.y * accumulatedTime * accumulatedTime;
+
+            // Draw line to the new position
+            ctx.setLineDash([5, 5]);
+            ctx.lineTo(newPosition.x, newPosition.y);
+        }
+
+        ctx.stroke();
+        ctx.restore();
     }
 
     public renderCircle(position: Vector, radius: number, color: string) {

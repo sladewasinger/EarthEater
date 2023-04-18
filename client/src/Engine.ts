@@ -11,6 +11,9 @@ export class EngineState {
     fireDelay: number = 1000;
     fireDebounce: boolean = false;
     myPlayerId: string | undefined;
+    maxMissileTimeMs: number = 5000;
+    maxCanonVelocity: number = 1000;
+    minCanonVelocity: number = 50;
 }
 
 export class Engine {
@@ -89,16 +92,18 @@ export class Engine {
 
         this.handlePlayerInput(dt);
 
-        // create explosion
+        // create explosion on mouse click
         if (this.mouse.left && !this.engineState.fireDebounce) {
             let mouseWorldPos = this.renderer.getWorldPosition(this.mouse.position);
             this.createExplosion(mouseWorldPos);
         }
 
+        // update explosions
         for (let i = 0; i < this.gameState.explosions.length; i++) {
             let explosion = this.gameState.explosions[i];
 
             if (!explosion.isExploded) {
+                // "explode" & move terrain points
                 let explosionRadius = explosion.radius;
                 let explosionPos = explosion.position;
                 for (let point of this.gameState.terrainMesh) {
@@ -141,11 +146,18 @@ export class Engine {
         // render missiles
         for (let missile of this.gameState.missiles) {
             missile.update(dt, this.gameState);
-            if (missile.isExploded) {
+            if (missile.isExploded || missile.elapsedTime > this.engineState.maxMissileTimeMs) {
                 this.gameState.missiles.splice(this.gameState.missiles.indexOf(missile), 1);
                 this.createExplosion(missile.position);
             }
-            this.renderer.renderCircle(missile.position, missile.radius, 'rgba(0, 0, 0, 0.5)');
+            this.renderer.renderCircle(missile.position, missile.radius, 'rgba(0, 0, 0, 1)');
+        }
+
+        if (this.myPlayer) {
+            this.renderer.renderParabolicTrajectory(
+                this.myPlayer.getCanonTipPosition(),
+                this.myPlayer.getCanonTipVelocity(),
+                this.gameState, 5, 'rgba(0, 0, 0, 0.5)');
         }
 
         this.gameState.lastUpdate = now;
@@ -156,8 +168,8 @@ export class Engine {
         this.gameState.explosions.push(explosion);
     }
 
-    private fireMissile(pos: Vector, direction: Vector, speed: number) {
-        let missile = new Missile(pos, Vector.scale(direction, speed), 5);
+    private fireMissile(pos: Vector, velocity: Vector) {
+        let missile = new Missile(pos, velocity, 5);
         this.gameState.missiles.push(missile);
     }
 
@@ -180,7 +192,6 @@ export class Engine {
                 let nextTerrainPoint = terrainMesh[terrainPointIndex + 1];
                 if (nextTerrainPoint) {
                     let slope = (nextTerrainPoint.y - terrainPoint.y) / (nextTerrainPoint.x - terrainPoint.x);
-                    console.log(slope)
                     if (slope < -maxSlope) {
                         return;
                     }
@@ -200,7 +211,6 @@ export class Engine {
                 let nextTerrainPoint = terrainMesh[terrainPointIndex - 1];
                 if (nextTerrainPoint) {
                     let slope = (nextTerrainPoint.y - terrainPoint.y) / (nextTerrainPoint.x - terrainPoint.x);
-                    console.log(slope)
                     if (slope > maxSlope) {
                         return;
                     }
@@ -210,13 +220,21 @@ export class Engine {
         }
 
         if (this.gameState.inputs['q']) {
-            this.myPlayer.facingAngle -= 0.01;
+            this.myPlayer.facingAngle -= 0.005;
+            this.myPlayer.facingAngle = MathUtils.clamp(this.myPlayer.facingAngle, Math.PI, 2 * Math.PI);
         }
         if (this.gameState.inputs['e']) {
-            this.myPlayer.facingAngle += 0.01;
+            this.myPlayer.facingAngle += 0.005;
+            this.myPlayer.facingAngle = MathUtils.clamp(this.myPlayer.facingAngle, Math.PI, 2 * Math.PI);
         }
-
-        this.myPlayer.facingAngle = MathUtils.clamp(this.myPlayer.facingAngle, Math.PI, 2 * Math.PI);
+        if (this.gameState.inputs['w']) {
+            this.myPlayer.canonPower += 5;
+            this.myPlayer.canonPower = MathUtils.clamp(this.myPlayer.canonPower, this.engineState.minCanonVelocity, this.engineState.maxCanonVelocity);
+        }
+        if (this.gameState.inputs['s']) {
+            this.myPlayer.canonPower -= 5;
+            this.myPlayer.canonPower = MathUtils.clamp(this.myPlayer.canonPower, this.engineState.minCanonVelocity, this.engineState.maxCanonVelocity);
+        }
 
         if (this.gameState.inputs[' '] && !this.engineState.fireDebounce) {
             this.engineState.fireDebounce = true;
@@ -224,9 +242,7 @@ export class Engine {
                 this.engineState.fireDebounce = false;
             }, this.engineState.fireDelay);
 
-            let pos = this.myPlayer.position.clone();
-            pos = Vector.add(pos, Vector.fromAngle(this.myPlayer.facingAngle, 50));
-            this.fireMissile(pos, Vector.fromAngle(this.myPlayer.facingAngle, 1), 500);
+            this.fireMissile(this.myPlayer.getCanonTipPosition(), this.myPlayer.getCanonTipVelocity());
         }
     }
 
@@ -275,14 +291,6 @@ export class Engine {
             displacement *= 2 ** (-roughness);
         }
         terrainMesh.push(...points);
-
-
-
-        // for (let i = 0; i < endPosX; i += resolution) {
-        //     let pos = new Vector(i, Math.max(minHeight, Math.min(maxHeight, lastPos.y + (Math.random() * 2 - 1) * 100 * jaggedness)));
-        //     terrainMesh.push(pos);
-        //     lastPos = pos;
-        // }
         terrainMesh.push(new Vector(endPosX, startPos.y));
 
         const bottomRight = new Vector(worldWidth, worldHeight);
