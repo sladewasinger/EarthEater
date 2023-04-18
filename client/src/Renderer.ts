@@ -67,7 +67,7 @@ export class Renderer {
 
         ctx.imageSmoothingEnabled = false;
 
-        this.timeOfDay = (gameState.frame * 5) % 24000 + 0;
+        this.timeOfDay = (gameState.frame * 20) % 24000 + 0;
 
         // Clear the canvas
         ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -118,6 +118,7 @@ export class Renderer {
         const night = <Color>[0, 0, 0];
         const dawn = <Color>[255, 140, 0];
         const day = <Color>[135, 206, 235];
+        const day2 = <Color>[155, 190, 255];
         const dusk = <Color>[238, 130, 238];
 
         const timeToColors: TimeToColors = {
@@ -126,7 +127,9 @@ export class Renderer {
             7200: [dawn, dawn],
             8000: [dawn, day],
             9000: [day, day],
-            17800: [day, dusk],
+            12000: [day, day],
+            15000: [day2, day2],
+            18800: [day2, dusk],
             20600: [dusk, night],
             24000: [night, night],
         };
