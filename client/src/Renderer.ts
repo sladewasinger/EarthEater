@@ -64,9 +64,10 @@ export class Renderer {
         // Clear the canvas
         ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.renderGradientBackground(ctx, gameState);
-        this.renderSun(ctx, gameState);
+        this.renderSun(ctx);
         this.renderTerrainMesh(ctx, gameState);
         this.renderPlayers(ctx, gameState);
+        this.renderHelpText(ctx, gameState);
     }
 
     private adjustToCamera(ctx: CanvasRenderingContext2D) {
@@ -87,7 +88,7 @@ export class Renderer {
         ctx.restore();
     }
 
-    private renderSun(ctx: CanvasRenderingContext2D, gameState: GameState) {
+    private renderSun(ctx: CanvasRenderingContext2D) {
         ctx.save();
         this.adjustToCamera(ctx);
 
@@ -206,6 +207,25 @@ export class Renderer {
         }
 
         ctx.stroke();
+        ctx.restore();
+    }
+
+    private renderHelpText(ctx: CanvasRenderingContext2D, gameState: GameState) {
+        ctx.save();
+        this.adjustToCamera(ctx);
+
+        ctx.font = "20px Arial";
+        ctx.fillStyle = "#000000";
+        const textLines = [
+            "Press 'a' or 'd' to move left and right.",
+            "Press 'w' or 's' to increase/decrease power.",
+            "Press 'q' or 'e' to change angle.",
+        ]
+        const y = gameState.worldHeight - 30 * textLines.length - 10;
+        for (let i = 0; i < textLines.length; i++) {
+            ctx.fillText(textLines[i], 10, y + 30 * i);
+        }
+
         ctx.restore();
     }
 

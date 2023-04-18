@@ -58,10 +58,21 @@ export class Engine {
         else
             this.renderer.zoom(this.renderer.canvas.width / this.gameState.worldWidth);
 
+        // center canvas on screen
+        this.centerCameraOnScreen();
+
         setInterval(() => {
             this.update();
         }, 1000 / this.fps);
     }
+
+    private centerCameraOnScreen() {
+        this.renderer.pan(
+            -(window.innerWidth / this.renderer.camera.zoom - this.gameState.worldWidth) / 2,
+            -(window.innerHeight / this.renderer.camera.zoom - this.gameState.worldHeight) / 2
+        );
+    }
+
 
     public update() {
         const now = Date.now();
@@ -243,6 +254,10 @@ export class Engine {
             }, this.engineState.fireDelay);
 
             this.fireMissile(this.myPlayer.getCanonTipPosition(), this.myPlayer.getCanonTipVelocity());
+        }
+
+        if (this.gameState.inputs['0']) {
+            this.centerCameraOnScreen();
         }
     }
 
