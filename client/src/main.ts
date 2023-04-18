@@ -5,4 +5,4 @@ import './style.css'
 const renderer = new Renderer();
 renderer.loadAssets();
 const engine = new Engine(renderer);
-await engine.start();
+engine.start();
