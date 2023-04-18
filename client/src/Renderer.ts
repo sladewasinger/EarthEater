@@ -163,6 +163,9 @@ export class Renderer {
         ctx.save();
         this.adjustToCamera(ctx);
 
+        ctx.rect(0, 0, gameState.worldWidth, gameState.worldHeight);
+        ctx.clip();
+
         // sun follows arc based on game frame
         let sunX = gameState.worldWidth / 2 - Math.sin(sunAngle) * 500;
         let sunY = gameState.worldHeight / 2 + Math.cos(sunAngle) * 500;
