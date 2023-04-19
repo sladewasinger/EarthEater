@@ -4,6 +4,7 @@ import { Vector } from "./models/Vector";
 import { GameState } from "./models/GameState";
 import { MathUtils } from "./models/MathUtils";
 import { Missile } from "./models/Missile";
+import { SimplexNoise } from "perlin-noise";
 
 class Cloud {
     constructor(public position: Vector, public radius: number) { }
@@ -20,7 +21,10 @@ export class Renderer {
     constructor() {
         this.canvas = document.createElement('canvas');
         document.body.appendChild(this.canvas);
-        window.addEventListener('resize', () => this.resize());
+        window.addEventListener('resize', () => {
+            this.resize()
+
+        });
         this.resize();
     }
 
@@ -41,6 +45,22 @@ export class Renderer {
     resize() {
         this.canvas.width = window.innerWidth;
         this.canvas.height = window.innerHeight;
+    }
+
+    getDarkColor() {
+        if (this.timeOfDay > 6000 && this.timeOfDay < 20600) {
+            return '#000000';
+        } else {
+            return '#ffffff';
+        }
+    }
+
+    getLightColor() {
+        if (this.timeOfDay > 6000 && this.timeOfDay < 20600) {
+            return '#ffffff';
+        } else {
+            return '#000000';
+        }
     }
 
     async loadAssets() {
@@ -72,6 +92,7 @@ export class Renderer {
         // Clear the canvas
         ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.renderSky(ctx, gameState);
+        this.renderMoon(ctx, gameState, dt);
         this.renderClouds(ctx, gameState, dt);
         this.renderTerrainMesh(ctx, gameState);
         this.renderPlayers(ctx, gameState);
@@ -130,7 +151,7 @@ export class Renderer {
             12000: [day, day],
             15000: [day2, day2],
             18800: [day2, dusk],
-            20600: [dusk, night],
+            20600: [night, dusk],
             24000: [night, night],
         };
 
@@ -173,6 +194,10 @@ export class Renderer {
         let sunX = gameState.worldWidth / 2 - Math.sin(sunAngle) * 500;
         let sunY = gameState.worldHeight / 2 + Math.cos(sunAngle) * 500;
 
+        // orange glow
+        ctx.shadowColor = "#ff7f00";
+        ctx.shadowBlur = 40;
+
         ctx.fillStyle = "#ffff00";
         ctx.beginPath();
         ctx.arc(sunX, sunY, 100, 0, 2 * Math.PI);
@@ -190,6 +215,56 @@ export class Renderer {
             }
         }
 
+        ctx.restore();
+    }
+
+    private renderMoon(ctx: CanvasRenderingContext2D, gameState: GameState, dt: number) {
+        ctx.save();
+        this.adjustToCamera(ctx);
+
+        ctx.rect(0, 0, gameState.worldWidth, gameState.worldHeight);
+        ctx.clip();
+
+        // render moon
+        let moonAngle = (2 * Math.PI * (this.timeOfDay + 12000)) / 24000;
+        let moonX = gameState.worldWidth / 2 - Math.sin(moonAngle) * 500;
+        let moonY = gameState.worldHeight / 2 + Math.cos(moonAngle) * 500;
+
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.arc(moonX, moonY, 50, 0, 2 * Math.PI);
+        ctx.shadowColor = "#ffffff";
+        ctx.shadowBlur = 20;
+        ctx.fill();
+
+        // Reset shadow for craters
+        ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
+        ctx.shadowBlur = 5;
+        ctx.shadowOffsetX = 2;
+        ctx.shadowOffsetY = 2;
+
+        // add craters to moon
+        ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
+        const mulberry32 = MathUtils.mulberry32(1234);
+        for (let i = 0; i < 100; i++) {
+            let x = moonX + mulberry32() * 70 - 35;
+            let y = moonY + mulberry32() * 70 - 35;
+            let size = mulberry32() * 4;
+            let numPoints = 5 + Math.floor(mulberry32() * 6); // random number of points between 5 and 10
+            let angle = mulberry32() * Math.PI * 2;
+            let angleStep = (Math.PI * 2) / numPoints;
+
+            // draw crater
+            ctx.beginPath();
+            ctx.moveTo(x + size * Math.cos(angle), y + size * Math.sin(angle));
+            for (let j = 1; j < numPoints; j++) {
+                angle += angleStep;
+                let pointRadius = size + mulberry32() * size * 0.2 - size * 0.1; // random radius variation
+                ctx.lineTo(x + pointRadius * Math.cos(angle), y + pointRadius * Math.sin(angle));
+            }
+            ctx.closePath();
+            ctx.fill();
+        }
         ctx.restore();
     }
 
@@ -477,12 +552,7 @@ export class Renderer {
     }
 
     public renderMissile(missile: Missile) {
-        if (this.timeOfDay > 6000 && this.timeOfDay < 20600) {
-            this.renderCircle(missile.position, missile.radius, 'black', 'white');
-        }
-        else {
-            this.renderCircle(missile.position, missile.radius, 'white', 'black');
-        }
+        this.renderCircle(missile.position, missile.radius, this.getDarkColor(), this.getLightColor());
     }
 
     public renderRect(pos: Vector, size: Vector, color: string) {

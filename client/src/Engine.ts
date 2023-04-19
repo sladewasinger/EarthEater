@@ -68,6 +68,7 @@ export class Engine {
             this.renderer.zoom(this.renderer.canvas.width / this.gameState.worldWidth);
 
         // center canvas on screen
+        window.addEventListener('resize', () => this.centerCameraOnScreen());
         this.centerCameraOnScreen();
 
         setInterval(() => {
