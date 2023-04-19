@@ -344,7 +344,7 @@ export class Renderer {
             ctx.fillStyle = "#d2b48c";
         } else {
             // dark grey
-            ctx.fillStyle = "#777";
+            ctx.fillStyle = "#555";
         }
         ctx.beginPath();
         ctx.moveTo(terrainMesh[0].x, terrainMesh[0].y);
