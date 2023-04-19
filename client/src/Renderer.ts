@@ -12,6 +12,8 @@ class Cloud {
 
 export class Renderer {
     canvas: HTMLCanvasElement;
+    context: CanvasRenderingContext2D | undefined;
+    offscreenCanvas: HTMLCanvasElement;
     camera: Camera = new Camera();
     images: { [key: string]: HTMLImageElement } = {};
     explosions: Explosion[] = [];
@@ -20,6 +22,10 @@ export class Renderer {
 
     constructor() {
         this.canvas = document.createElement('canvas');
+        this.offscreenCanvas = document.createElement('canvas');
+        this.offscreenCanvas.width = this.canvas.width;
+        this.offscreenCanvas.height = this.canvas.height;
+
         document.body.appendChild(this.canvas);
         window.addEventListener('resize', () => {
             this.resize()
@@ -45,6 +51,9 @@ export class Renderer {
     resize() {
         this.canvas.width = window.innerWidth;
         this.canvas.height = window.innerHeight;
+
+        this.offscreenCanvas.width = this.canvas.width;
+        this.offscreenCanvas.height = this.canvas.height;
     }
 
     getDarkColor() {
@@ -82,23 +91,27 @@ export class Renderer {
     }
 
     public render(gameState: GameState, dt: number) {
-        let ctx = this.canvas.getContext('2d');
-        if (!ctx) throw new Error('Could not get canvas context');
+        if (!this.context) {
+            let ctx = this.canvas.getContext('2d');
+            if (!ctx) throw new Error('Could not get canvas context');
+            this.context = ctx;
+        }
 
-        ctx.imageSmoothingEnabled = false;
+        this.context.imageSmoothingEnabled = false;
 
         this.timeOfDay = (gameState.frame * 5) % 24000 + 0;
 
         // Clear the canvas
-        ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        this.renderSky(ctx, gameState);
-        this.renderMoon(ctx, gameState, dt);
-        this.renderClouds(ctx, gameState, dt);
-        this.renderTerrainMesh(ctx, gameState);
-        this.renderPlayers(ctx, gameState);
-        this.renderHelpText(ctx, gameState);
-        this.renderPlayerInfo(ctx, gameState);
-        this.renderDebugInfo(ctx, gameState);
+        this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.renderSky(this.context, gameState);
+        this.renderSun(this.context, gameState);
+        this.renderMoon(this.context, gameState);
+        this.renderClouds(this.context, gameState, dt);
+        this.renderTerrainMesh(this.context, gameState);
+        this.renderPlayers(this.context, gameState);
+        this.renderHelpText(this.context, gameState);
+        this.renderPlayerInfo(this.context, gameState);
+        this.renderDebugInfo(this.context, gameState);
     }
 
     private adjustToCamera(ctx: CanvasRenderingContext2D) {
@@ -132,10 +145,6 @@ export class Renderer {
         }
 
         // Gradient colors based on time of day (frame)
-
-        // Sun's angle based on game frame
-        let sunAngle = (2 * Math.PI * this.timeOfDay) / 24000;
-
         const night = <Color>[0, 0, 0];
         const dawn = <Color>[255, 140, 0];
         const day = <Color>[135, 206, 235];
@@ -182,17 +191,22 @@ export class Renderer {
         ctx.fillRect(0, 0, gameState.worldWidth, gameState.worldHeight);
 
         ctx.restore();
+    }
 
-        // render sun
+    private renderSun(ctx: CanvasRenderingContext2D, gameState: GameState) {
         ctx.save();
         this.adjustToCamera(ctx);
 
+        ctx.beginPath();
         ctx.rect(0, 0, gameState.worldWidth, gameState.worldHeight);
         ctx.clip();
 
+        // Sun's angle based on game frame
+        let sunAngle = (2 * Math.PI * this.timeOfDay) / 24000;
+
         // sun follows arc based on game frame
-        let sunX = gameState.worldWidth / 2 - Math.sin(sunAngle) * 500;
-        let sunY = gameState.worldHeight / 2 + Math.cos(sunAngle) * 500;
+        let sunX = gameState.worldWidth / 2 - Math.sin(sunAngle) * 600;
+        let sunY = gameState.worldHeight / 2 + 100 + Math.cos(sunAngle) * gameState.worldHeight / 2;
 
         // orange glow
         ctx.shadowColor = "#ff7f00";
@@ -218,7 +232,7 @@ export class Renderer {
         ctx.restore();
     }
 
-    private renderMoon(ctx: CanvasRenderingContext2D, gameState: GameState, dt: number) {
+    private renderMoon(ctx: CanvasRenderingContext2D, gameState: GameState) {
         ctx.save();
         this.adjustToCamera(ctx);
 
@@ -228,43 +242,37 @@ export class Renderer {
         // render moon
         let moonAngle = (2 * Math.PI * (this.timeOfDay + 12000)) / 24000;
         let moonX = gameState.worldWidth / 2 - Math.sin(moonAngle) * 500;
-        let moonY = gameState.worldHeight / 2 + Math.cos(moonAngle) * 500;
+        let moonY = gameState.worldHeight / 2 + 60 + Math.cos(moonAngle) * 500;
 
-        ctx.fillStyle = "#ffffff";
-        ctx.beginPath();
-        ctx.arc(moonX, moonY, 50, 0, 2 * Math.PI);
+        let offscreenCtx = this.offscreenCanvas.getContext('2d');
+        if (!offscreenCtx) {
+            throw new Error("Could not get offscreen canvas context");
+        }
+
+        // Draw the outer circle on the offscreen canvas
+        offscreenCtx.fillStyle = "#ffffff";
+        offscreenCtx.beginPath();
+        offscreenCtx.arc(50, 50, 50, 0, 2 * Math.PI);
+        offscreenCtx.fill();
+
+        // Draw the inner circle (subtractive) on the offscreen canvas
+        offscreenCtx.globalCompositeOperation = "destination-out";
+        offscreenCtx.beginPath();
+        offscreenCtx.arc(50 + 20, 50, 50, 0, 2 * Math.PI);
+        offscreenCtx.fill();
+
+        // Reset composite operation to default on the offscreen canvas
+        offscreenCtx.globalCompositeOperation = "source-over";
+
+        // Draw the crescent moon on the main canvas with shadow
         ctx.shadowColor = "#ffffff";
         ctx.shadowBlur = 20;
-        ctx.fill();
+        ctx.drawImage(this.offscreenCanvas, moonX - 50, moonY - 50);
 
-        // Reset shadow for craters
-        ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
-        ctx.shadowBlur = 5;
-        ctx.shadowOffsetX = 2;
-        ctx.shadowOffsetY = 2;
+        // Reset shadow settings
+        ctx.shadowColor = "transparent";
+        ctx.shadowBlur = 0;
 
-        // add craters to moon
-        ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
-        const mulberry32 = MathUtils.mulberry32(1234);
-        for (let i = 0; i < 100; i++) {
-            let x = moonX + mulberry32() * 70 - 35;
-            let y = moonY + mulberry32() * 70 - 35;
-            let size = mulberry32() * 4;
-            let numPoints = 5 + Math.floor(mulberry32() * 6); // random number of points between 5 and 10
-            let angle = mulberry32() * Math.PI * 2;
-            let angleStep = (Math.PI * 2) / numPoints;
-
-            // draw crater
-            ctx.beginPath();
-            ctx.moveTo(x + size * Math.cos(angle), y + size * Math.sin(angle));
-            for (let j = 1; j < numPoints; j++) {
-                angle += angleStep;
-                let pointRadius = size + mulberry32() * size * 0.2 - size * 0.1; // random radius variation
-                ctx.lineTo(x + pointRadius * Math.cos(angle), y + pointRadius * Math.sin(angle));
-            }
-            ctx.closePath();
-            ctx.fill();
-        }
         ctx.restore();
     }
 
@@ -325,7 +333,6 @@ export class Renderer {
         ctx.restore();
     }
 
-
     private renderTerrainMesh(ctx: CanvasRenderingContext2D, gameState: GameState) {
         let terrainMesh = gameState.terrainMesh;
 
@@ -362,27 +369,42 @@ export class Renderer {
             ctx.save();
             this.adjustToCamera(ctx);
 
+            // draw tank
             ctx.translate(player.position.x, player.position.y);
+
+            // draw arrow pointing to current player
+            if (player.id === gameState.players[gameState.currentPlayerIndex].id) {
+                ctx.save();
+                ctx.translate(player.hitBox.x / 2, - 75); // Adjust the translation
+
+                ctx.strokeStyle = 'black';
+                ctx.fillStyle = 'red';
+                ctx.lineWidth = 2;
+
+                ctx.beginPath();
+                ctx.rect(-2.5, -5, 5, -20); // Arrow shaft
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(-10, -10); // Left side of arrowhead
+                ctx.lineTo(10, -10);  // Right side of arrowhead
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.restore();
+            }
+
             ctx.fillStyle = player.color;
             ctx.fillRect(0, 0, player.hitBox.x, player.hitBox.y);
             ctx.strokeStyle = 'black';
             ctx.lineWidth = 1;
             ctx.strokeRect(0, 0, player.hitBox.x, player.hitBox.y);
 
-            // draw player health bar
-            let R = (1 - player.health / 100) * 255;
-            let G = 255 - R;
-
-            if (!player.isDead) {
-                ctx.fillStyle = "white";
-                ctx.fillRect(-player.hitBox.x / 2, -10, player.hitBox.x * 2, 5);
-                ctx.strokeStyle = 'black';
-                ctx.lineWidth = 1;
-                ctx.strokeRect(-player.hitBox.x / 2, -10, player.hitBox.x * 2, 5);
-                ctx.fillStyle = `rgb(${R}, ${G}, 0)`;
-                ctx.fillRect(-player.hitBox.x / 2, -10, player.hitBox.x * 2 * (player.health / 100), 5);
-            } else {
-                // draw x over player
+            // draw x over dead player
+            if (player.isDead) {
                 ctx.save();
                 ctx.translate(player.hitBox.x / 2, player.hitBox.y / 2);
 
@@ -413,22 +435,52 @@ export class Renderer {
 
             // draw player name
             if (player.isDead) {
-                ctx.translate(player.hitBox.x / 2, player.hitBox.y + 30);
+                ctx.translate(player.hitBox.x / 2, player.hitBox.y + 20);
             } else {
-                ctx.translate(player.hitBox.x / 2, player.hitBox.y / 2 - 30);
+                ctx.translate(player.hitBox.x / 2, player.hitBox.y / 2 - 45);
             }
-            ctx.fillStyle = '#000000';
+            ctx.fillStyle = this.getLightColor();
             ctx.font = "20px Arial";
             ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            const textSize = ctx.measureText(player.name);
+            const fontHeight = (textSize.fontBoundingBoxAscent + textSize.fontBoundingBoxDescent) * 1.1;
+            const width = textSize.width * 1.1;
+            //ctx.fillRect(-width / 2, -fontHeight / 2, width, fontHeight);
+            ctx.beginPath();
+            ctx.roundRect(-width / 2, -fontHeight / 2, width, fontHeight, 5);
+            ctx.fill();
+
+            ctx.fillStyle = this.getDarkColor();
             ctx.fillText(player.name, 0, 0);
+
+            // draw player health bar
+            if (!player.isDead) {
+                let R = (1 - player.health / 100) * 255;
+                let G = 255 - R;
+                let y = -fontHeight / 2 - 10;
+                ctx.fillStyle = "white";
+                ctx.beginPath();
+                ctx.roundRect(-width / 2, y, width, 5, 5);
+                ctx.fill();
+                ctx.strokeStyle = 'black';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.roundRect(-width / 2, y, width, 5, 5);
+                ctx.stroke();
+                ctx.fillStyle = `rgb(${R}, ${G}, 0)`;
+                ctx.beginPath();
+                ctx.roundRect(-width / 2, y, width * (player.health / 100), 5, 5);
+                ctx.fill();
+            }
 
             ctx.restore();
         }
     }
 
     public renderParabolicTrajectory(initialPosition: Vector, initialVelocity: Vector, gameState: GameState, numPoints: number = 100) {
-        const ctx = this.canvas.getContext('2d');
-        if (!ctx) throw new Error('Canvas context not found');
+        const ctx = this.context;
+        if (!ctx) return;
 
         ctx.save();
         this.adjustToCamera(ctx);
@@ -469,6 +521,7 @@ export class Renderer {
         ctx.setLineDash([5, 5]);
         ctx.lineDashOffset = 0;
         ctx.stroke();
+
         ctx.restore();
     }
 

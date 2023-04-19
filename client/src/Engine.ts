@@ -153,7 +153,7 @@ export class Engine {
         for (let player of this.gameState.players) {
             if (player.isDead && !player.exploded) {
                 player.exploded = true;
-                this.createExplosion(player.position, 100, 100);
+                this.createExplosion(player.position, 100, 40);
                 //this.gameState.players.splice(this.gameState.players.indexOf(player), 1);
             }
         }
@@ -221,7 +221,7 @@ export class Engine {
     }
 
     private handlePlayerInput(dt: number) {
-        if (!this.myPlayer) {
+        if (!this.myPlayer || this.myPlayer.isDead || this.gameState.players[this.gameState.currentPlayerIndex] !== this.myPlayer) {
             return;
         }
 
@@ -274,11 +274,11 @@ export class Engine {
         }
 
         if (this.gameState.inputs['w']) {
-            this.myPlayer.power += 5;
+            this.myPlayer.power += 2;
             this.myPlayer.power = MathUtils.clamp(this.myPlayer.power, this.engineState.minCanonVelocity, this.engineState.maxCanonVelocity);
         }
         if (this.gameState.inputs['s']) {
-            this.myPlayer.power -= 5;
+            this.myPlayer.power -= 2;
             this.myPlayer.power = MathUtils.clamp(this.myPlayer.power, this.engineState.minCanonVelocity, this.engineState.maxCanonVelocity);
         }
 
@@ -311,10 +311,12 @@ export class Engine {
 
         if (key === '-') {
             this.renderer.zoom(this.renderer.camera.zoom - 0.1);
+            this.centerCameraOnScreen();
         }
 
         if (key === '+' || key === '=') {
             this.renderer.zoom(this.renderer.camera.zoom + 0.1);
+            this.centerCameraOnScreen();
         }
     }
 
