@@ -1,8 +1,4 @@
-import { Camera } from "../Camera";
-import { Renderer } from "../Renderer";
 import { Vector } from "./Vector";
-import { GameState } from "./GameState";
-
 
 export class Mouse {
     position: Vector = new Vector(0, 0);

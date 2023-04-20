@@ -6,6 +6,9 @@ import { Mouse } from "./models/Mouse";
 import { Explosion } from "./models/Explosion";
 import { MathUtils } from "./models/MathUtils";
 import { Missile } from "./models/Missile";
+import { MainForm } from "./forms/main-form/main-form";
+
+console.log("Engine.ts loaded");
 
 export class EngineState {
     fireDelay: number = 1000;
@@ -22,6 +25,7 @@ export class Engine {
     gameState: GameState;
     engineState: EngineState = new EngineState();
     mouse: Mouse;
+    mainForm: MainForm;
 
     constructor(public renderer: Renderer) {
         this.gameState = new GameState();
@@ -30,6 +34,9 @@ export class Engine {
 
         window.addEventListener('keydown', (e) => this.onKeyDown(e));
         window.addEventListener('keyup', (e) => this.onKeyUp(e));
+
+        this.mainForm = document.createElement('main-form') as MainForm;
+        document.body.appendChild(this.mainForm);
     }
 
     get myPlayer() {

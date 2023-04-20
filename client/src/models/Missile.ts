@@ -1,7 +1,6 @@
 import { GameState } from "./GameState";
 import { Vector } from "./Vector";
 
-
 export class Missile {
     public elapsedTime: number = 0;
     public isExploded: boolean = false;
@@ -80,5 +79,4 @@ export class Missile {
 
         return distanceSquared <= radius ** 2;
     }
-
 }

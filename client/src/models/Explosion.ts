@@ -1,6 +1,5 @@
 import { Vector } from "./Vector";
 
-
 export class Explosion {
     public elapsedTime: number = 0;
     public isExploded: boolean = false;

@@ -1,7 +1,6 @@
 import { Vector } from "./Vector";
 import { Player } from "./Player";
 
-
 export class Dynamite {
     elapsedTimeMs: number = 0;
     exploded: boolean = false;

@@ -1,0 +1,13 @@
+@import "global.css";
+
+:host {
+    text-align: center;
+}
+
+h1 {
+    margin-bottom: 0;
+}
+
+.btn-create {
+    background-color: var(--orange);
+}

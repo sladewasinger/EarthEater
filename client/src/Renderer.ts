@@ -4,7 +4,6 @@ import { Vector } from "./models/Vector";
 import { GameState } from "./models/GameState";
 import { MathUtils } from "./models/MathUtils";
 import { Missile } from "./models/Missile";
-import { SimplexNoise } from "perlin-noise";
 
 class Cloud {
     constructor(public position: Vector, public radius: number) { }
