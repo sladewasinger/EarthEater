@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import CreateLobby from './components/CreateLobby.vue';
 import JoinLobby from './components/JoinLobby.vue';
-import { reactive, ref } from "vue";
+import { reactive } from "vue";
 
 
 const state = reactive({
