@@ -7,8 +7,7 @@ import { Explosion } from "./models/Explosion";
 import { MathUtils } from "./models/MathUtils";
 import { Missile } from "./models/Missile";
 import { MainForm } from "./forms/main-form/main-form";
-
-console.log("Engine.ts loaded");
+import * as socketio from "socket.io-client";
 
 export class EngineState {
     fireDelay: number = 1000;
@@ -26,8 +25,16 @@ export class Engine {
     engineState: EngineState = new EngineState();
     mouse: Mouse;
     mainForm: MainForm;
+    socket: socketio.Socket;
 
     constructor(public renderer: Renderer) {
+        let url = new URL(window.location.href);
+        let port = 80;
+        if (window.location.hostname === "localhost") {
+            port = 3000;
+        }
+        this.socket = socketio.connect(url.protocol + "//" + url.hostname + ":" + port);
+
         this.gameState = new GameState();
 
         this.mouse = new Mouse(this.renderer.canvas);
