@@ -6,7 +6,6 @@ import { Mouse } from "./models/Mouse";
 import { Explosion } from "./models/Explosion";
 import { MathUtils } from "./models/MathUtils";
 import { Missile } from "./models/Missile";
-import { MainForm } from "./forms/main-form/main-form";
 import * as socketio from "socket.io-client";
 
 export class EngineState {
@@ -24,7 +23,6 @@ export class Engine {
     gameState: GameState;
     engineState: EngineState = new EngineState();
     mouse: Mouse;
-    mainForm: MainForm;
     socket: socketio.Socket;
 
     constructor(public renderer: Renderer) {
@@ -43,8 +41,6 @@ export class Engine {
         window.addEventListener('keydown', (e) => this.onKeyDown(e));
         window.addEventListener('keyup', (e) => this.onKeyUp(e));
 
-        this.mainForm = document.createElement('main-form') as MainForm;
-        document.body.appendChild(this.mainForm);
         document.addEventListener('createLobby', () => this.createLobby());
         document.addEventListener('joinLobby', (e) => this.joinLobby(e));
     }
@@ -55,6 +51,7 @@ export class Engine {
         this.socket.on('lobbyCreated', (data: any) => {
             console.log(data);
         });
+        this.start();
     }
 
     joinLobby(event: Event): void {

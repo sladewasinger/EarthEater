@@ -15,3 +15,36 @@ input[type="text"] {
   border-radius: 5px;
   border: 1px solid #000;
 }
+
+input[type="text"] {
+  border-radius: 5px;
+  border: 1px solid #000;
+  padding: 10px;
+  font-size: 16px;
+}
+
+button {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 5px;
+  border: 1px solid #000;
+  background-color: #fff;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+:root {
+  --orange: #ffa500;
+  --green: #1bb943;
+}
+
+.card {
+  border-radius: 5px;
+  border: 1px solid #8C8C8C;
+  box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.2);
+  padding: 30px;
+  width: 400px;
+  max-width: 100%;
+  text-align: center;
+}
