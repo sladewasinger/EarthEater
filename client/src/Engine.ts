@@ -45,6 +45,25 @@ export class Engine {
 
         this.mainForm = document.createElement('main-form') as MainForm;
         document.body.appendChild(this.mainForm);
+        document.addEventListener('createLobby', () => this.createLobby());
+        document.addEventListener('joinLobby', (e) => this.joinLobby(e));
+    }
+
+    createLobby() {
+        console.log("Create lobby");
+        this.socket.emit('createLobby');
+        this.socket.on('lobbyCreated', (data: any) => {
+            console.log(data);
+        });
+    }
+
+    joinLobby(event: Event): void {
+        const name = (<CustomEvent>event).detail;
+        console.log("Join lobby");
+        this.socket.emit('joinLobby', { name: name });
+        this.socket.on('lobbyJoined', (data: any) => {
+            console.log(data);
+        });
     }
 
     get myPlayer() {

@@ -7,6 +7,4 @@ loadCustomComponents();
 
 const renderer = new Renderer();
 renderer.loadAssets();
-const engine = new Engine(renderer);
-engine.start();
-
+new Engine(renderer);
