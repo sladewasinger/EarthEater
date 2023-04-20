@@ -6,9 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build --base=/EarthEater",
-    "predeploy": "npm run build",
-    "deploy": "node scripts/gh-pages-deploy.mjs"
+    "build": "vite build --base=/EarthEater"
   },
   "devDependencies": {
     "typescript": "^4.9.3",

@@ -1,42 +1,30 @@
 export class CustomComponent extends HTMLElement {
     static registeredElements = new Set();
 
-    constructor() {
+    constructor(html: string, css: string) {
         super();
-
-        const pascalCaseName = this.constructor["name"];
-        const kebabName = pascalCaseName.replace(/([a-z0–9])([A-Z])/g, "$1-$2").toLowerCase();
-
-        const htmlPromise = import(`../${kebabName}/${kebabName}.html?raw`);
-        const cssPromise = import(`../${kebabName}/${kebabName}.css?raw`);
 
         this.attachShadow({ mode: 'open' });
         if (!this.shadowRoot)
             throw new Error('Shadow root not found');
 
-        Promise.all([htmlPromise, cssPromise]).then(data => {
-            if (!this.shadowRoot)
-                throw new Error('Shadow root not found');
+        if (!this.shadowRoot)
+            throw new Error('Shadow root not found');
 
-            let [htmlModule, cssModule] = data;
+        const template = document.createElement('template');
+        template.innerHTML = html;
 
-            const template = document.createElement('template');
-            template.innerHTML = htmlModule.default;
+        const style = document.createElement('style');
+        style.textContent = css;
+        template.content.appendChild(style);
 
-            const style = document.createElement('style');
-            style.textContent = cssModule.default;
-            template.content.appendChild(style);
-
-            this.shadowRoot.appendChild(template.content.cloneNode(true));
-
-            this.bindInputElements();
-            this.bindClickHandlers();
-            this.bindSubmitHandlers();
-        });
+        this.shadowRoot.appendChild(template.content.cloneNode(true));
     }
 
     connectedCallback() {
-
+        this.bindInputElements();
+        this.bindClickHandlers();
+        this.bindSubmitHandlers();
     }
 
     bindInputElements() {
