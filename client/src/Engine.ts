@@ -28,12 +28,13 @@ export class Engine {
     socket: socketio.Socket;
 
     constructor(public renderer: Renderer) {
-        let url = new URL(window.location.href);
+        let hostname = "eartheater.azurewebsites.net";
         let port = 80;
         if (window.location.hostname === "localhost") {
             port = 3000;
+            hostname = "localhost";
         }
-        this.socket = socketio.connect(url.protocol + "//" + url.hostname + ":" + port);
+        this.socket = socketio.connect(window.location.protocol + "//" + hostname + ":" + port);
 
         this.gameState = new GameState();
 
