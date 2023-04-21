@@ -45,18 +45,17 @@ export class Engine {
 
     createLobby() {
         console.log("Create lobby");
-        this.socket.emit('createLobby');
 
         return new Promise<string>((resolve, reject) => {
-            // Set a 5 second timeout
             const timeout = setTimeout(() => {
                 reject(new Error('Timeout: lobbyJoined event not received within 5 seconds'));
             }, 5000);
 
-            this.socket.on('lobbyCreated', (data: any) => {
-                console.log(data);
+            this.socket.emit('createLobby', null, (lobbyId: string) => {
+                console.log("Lobby created", lobbyId);
                 clearTimeout(timeout);
-                resolve(data);
+                this.lobbyId = lobbyId;
+                resolve(lobbyId);
             });
         });
     }
