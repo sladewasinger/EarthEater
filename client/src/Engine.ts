@@ -24,6 +24,8 @@ export class Engine {
     engineState: EngineState = new EngineState();
     mouse: Mouse;
     socket: socketio.Socket;
+    started: boolean = false;
+    lobbyId: string | undefined;
 
     constructor(public renderer: Renderer) {
         let hostname = "eartheater.azurewebsites.net";
@@ -48,15 +50,23 @@ export class Engine {
         this.socket.on('lobbyCreated', (data: any) => {
             console.log(data);
         });
-        this.start();
     }
 
-    joinLobby(event: Event): void {
-        const name = (<CustomEvent>event).detail;
-        console.log("Join lobby");
-        this.socket.emit('joinLobby', { name: name });
-        this.socket.on('lobbyJoined', (data: any) => {
-            console.log(data);
+    joinLobby(lobbyId: string): Promise<string> {
+        console.log("Join lobby", lobbyId);
+        this.socket.emit('joinLobby', { id: lobbyId });
+
+        return new Promise<string>((resolve, reject) => {
+            // Set a 5 second timeout
+            const timeout = setTimeout(() => {
+                reject(new Error('Timeout: lobbyJoined event not received within 5 seconds'));
+            }, 5000);
+
+            this.socket.once('lobbyJoined', (data: any) => {
+                console.log(data);
+                clearTimeout(timeout);
+                resolve(data);
+            });
         });
     }
 
@@ -73,7 +83,14 @@ export class Engine {
         this.gameState.inputs[e.key.toLowerCase()] = true;
     }
 
+    public delete() {
+        console.log("Clearing engine");
+        this.renderer.delete();
+    }
+
     public async start() {
+        this.started = true;
+
         this.gameState.terrainMesh = await this.createTerrainMesh();
         if (this.gameState.isSand) {
             while (this.smoothTerrain()) { /* keep smoothing until there are no more changes */ }

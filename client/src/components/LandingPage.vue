@@ -14,6 +14,7 @@ function lobbyCreated() {
     document.dispatchEvent(event);
 
     engine.createLobby();
+
 }
 </script>
 

@@ -1,12 +1,13 @@
 <script setup lang="ts">
+import { useRouter } from 'vue-router';
 
+const router = useRouter();
 let lobbyName: string;
 
 function joinLobby(e: Event) {
     e.preventDefault();
     console.log('Joining lobby...');
-    const event = new CustomEvent("joinLobby", { detail: lobbyName });
-    document.dispatchEvent(event);
+    router.push('/lobby/' + lobbyName);
 }
 </script>
 

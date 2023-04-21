@@ -26,11 +26,15 @@ export class Renderer {
         this.offscreenCanvas.height = this.canvas.height;
 
         document.body.appendChild(this.canvas);
-        window.addEventListener('resize', () => {
-            this.resize()
-
-        });
+        window.addEventListener('resize', this.resize.bind(this));
         this.resize();
+    }
+
+    delete() {
+        this.explosions = [];
+        this.clouds = [];
+        window.removeEventListener('resize', this.resize.bind(this));
+        document.body.removeChild(this.canvas);
     }
 
     getWorldPosition(pos: Vector): Vector {

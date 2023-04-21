@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
+import { engine } from '../main';
 
 const gameContainer = ref(null);
 
 onMounted(() => {
-
+    engine.start();
 });
 </script>
 <template>
