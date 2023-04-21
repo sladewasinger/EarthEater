@@ -28,5 +28,4 @@ app.mount('#app');
 
 const renderer = new Renderer();
 renderer.loadAssets();
-new Engine(renderer);
-
+export const engine = new Engine(renderer);

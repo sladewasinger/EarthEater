@@ -2,6 +2,7 @@
 import CreateLobby from './CreateLobby.vue';
 import JoinLobby from './JoinLobby.vue';
 import { reactive } from "vue";
+import { engine } from '../main.ts';
 
 const state = reactive({
     isInLobby: false,
@@ -11,6 +12,8 @@ function lobbyCreated() {
     state.isInLobby = true;
     const event = new CustomEvent("createLobby");
     document.dispatchEvent(event);
+
+    engine.createLobby();
 }
 </script>
 

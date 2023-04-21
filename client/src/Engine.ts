@@ -40,9 +40,6 @@ export class Engine {
 
         window.addEventListener('keydown', (e) => this.onKeyDown(e));
         window.addEventListener('keyup', (e) => this.onKeyUp(e));
-
-        document.addEventListener('createLobby', () => this.createLobby());
-        document.addEventListener('joinLobby', (e) => this.joinLobby(e));
     }
 
     createLobby() {
