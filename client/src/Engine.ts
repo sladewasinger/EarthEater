@@ -22,12 +22,13 @@ export class Engine {
     fps: number = 60;
     gameState: GameState;
     engineState: EngineState = new EngineState();
-    mouse: Mouse;
+    mouse: Mouse | undefined;
     socket: socketio.Socket;
     started: boolean = false;
     lobbyId: string | undefined;
+    renderer: Renderer | undefined;
 
-    constructor(public renderer: Renderer) {
+    constructor() {
         let hostname = "eartheater.azurewebsites.net";
         let port = 80;
         if (window.location.hostname === "localhost") {
@@ -38,17 +39,25 @@ export class Engine {
 
         this.gameState = new GameState();
 
-        this.mouse = new Mouse(this.renderer.canvas);
-
-        window.addEventListener('keydown', (e) => this.onKeyDown(e));
-        window.addEventListener('keyup', (e) => this.onKeyUp(e));
+        window.addEventListener('keydown', this.onKeyDown.bind(this));
+        window.addEventListener('keyup', this.onKeyUp.bind(this));
     }
 
     createLobby() {
         console.log("Create lobby");
         this.socket.emit('createLobby');
-        this.socket.on('lobbyCreated', (data: any) => {
-            console.log(data);
+
+        return new Promise<string>((resolve, reject) => {
+            // Set a 5 second timeout
+            const timeout = setTimeout(() => {
+                reject(new Error('Timeout: lobbyJoined event not received within 5 seconds'));
+            }, 5000);
+
+            this.socket.on('lobbyCreated', (data: any) => {
+                console.log(data);
+                clearTimeout(timeout);
+                resolve(data);
+            });
         });
     }
 
@@ -83,13 +92,27 @@ export class Engine {
         this.gameState.inputs[e.key.toLowerCase()] = true;
     }
 
-    public delete() {
-        console.log("Clearing engine");
-        this.renderer.delete();
+    public reset() {
+        this.renderer?.delete();
+        delete this.renderer;
+
+        this.mouse?.delete();
+        delete this.mouse;
+
+        this.started = false;
+        this.gameState = new GameState();
     }
 
     public async start() {
+        if (this.started) {
+            console.log("Engine already started");
+            return;
+        }
+
         this.started = true;
+
+        this.renderer = new Renderer();
+        this.mouse = new Mouse(this.renderer.canvas);
 
         this.gameState.terrainMesh = await this.createTerrainMesh();
         if (this.gameState.isSand) {
@@ -122,6 +145,8 @@ export class Engine {
     }
 
     private centerCameraOnScreen() {
+        if (this.renderer === undefined) return;
+
         this.renderer.pan(
             -(window.innerWidth / this.renderer.camera.zoom - this.gameState.worldWidth) / 2,
             -(window.innerHeight / this.renderer.camera.zoom - this.gameState.worldHeight) / 2
@@ -129,6 +154,8 @@ export class Engine {
     }
 
     public update() {
+        if (this.renderer === undefined || this.mouse === undefined) return;
+
         const now = Date.now();
         const dt = Math.min(now - this.gameState.lastUpdate, 1000 / 20);
 
@@ -346,6 +373,8 @@ export class Engine {
     }
 
     handleImmediateInput(key: string) {
+        if (this.renderer === undefined) return;
+
         if (key === '0') {
             this.centerCameraOnScreen();
         }

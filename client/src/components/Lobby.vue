@@ -1,23 +1,18 @@
 <script setup lang="ts">
 import { useRoute } from 'vue-router';
 import { engine } from '../main.ts';
+import { onMounted } from '@vue/runtime-dom';
 
 const route = useRoute();
 const lobbyId = route.params.id as string;
 
 console.log(lobbyId);
 
-if (!engine.started) {
+onMounted(() => {
+    engine.reset();
     engine.joinLobby(lobbyId);
-} else {
-    console.log("Already started");
-    engine.delete();
-
-    // TODO: Separate engine initialization from engine creation
-    //       allow for engine to be started and stopped multiple times
-}
-
-engine.start();
+    engine.start();
+});
 
 </script>
 

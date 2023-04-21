@@ -7,38 +7,50 @@ export class Mouse {
     middle: boolean = false;
 
     constructor(public canvas: HTMLCanvasElement) {
-        canvas.addEventListener("mousemove", (e) => {
-            // get true mouse position on canvas
-            let rect = canvas.getBoundingClientRect();
-            let x = e.clientX - rect.left;
-            let y = e.clientY - rect.top;
 
-            this.position.x = x;
-            this.position.y = y;
-        });
+        canvas.addEventListener("mousemove", this.mousemove.bind(this));
 
-        canvas.addEventListener("mousedown", (e) => {
-            if (e.button === 0) {
-                this.left = true;
-            }
-            if (e.button === 1) {
-                this.middle = true;
-            }
-            if (e.button === 2) {
-                this.right = true;
-            }
-        });
+        canvas.addEventListener("mousedown", this.mousedown.bind(this));
 
-        canvas.addEventListener("mouseup", (e) => {
-            if (e.button === 0) {
-                this.left = false;
-            }
-            if (e.button === 1) {
-                this.middle = false;
-            }
-            if (e.button === 2) {
-                this.right = false;
-            }
-        });
+        canvas.addEventListener("mouseup", this.mouseup.bind(this));
+    }
+
+    private mouseup(e: MouseEvent) {
+        if (e.button === 0) {
+            this.left = false;
+        }
+        if (e.button === 1) {
+            this.middle = false;
+        }
+        if (e.button === 2) {
+            this.right = false;
+        }
+    }
+
+    private mousedown(e: MouseEvent) {
+        if (e.button === 0) {
+            this.left = true;
+        }
+        if (e.button === 1) {
+            this.middle = true;
+        }
+        if (e.button === 2) {
+            this.right = true;
+        }
+    }
+
+    private mousemove(e: MouseEvent) {
+        let rect = this.canvas.getBoundingClientRect();
+        let x = e.clientX - rect.left;
+        let y = e.clientY - rect.top;
+
+        this.position.x = x;
+        this.position.y = y;
+    }
+
+    delete() {
+        this.canvas.removeEventListener("mousemove", this.mousemove.bind(this));
+        this.canvas.removeEventListener("mousedown", this.mousedown.bind(this));
+        this.canvas.removeEventListener("mouseup", this.mouseup.bind(this));
     }
 }

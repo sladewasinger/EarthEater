@@ -5,14 +5,12 @@ import { Renderer } from "./Renderer";
 import { createApp } from 'vue';
 import LandingPage from './components/LandingPage.vue';
 import Lobby from './components/Lobby.vue';
-import Game from './components/Game.vue';
 import App from './App.vue';
 import { createRouter, createWebHashHistory } from 'vue-router';
 
 const routes = [
     { path: '/', component: LandingPage },
     { path: '/lobby/:id', component: Lobby },
-    { path: '/game', component: Game }
 ]
 
 // 3. Create the router instance and pass the `routes` option
@@ -28,6 +26,4 @@ const app = createApp(App);
 app.use(router);
 app.mount('#app');
 
-const renderer = new Renderer();
-renderer.loadAssets();
-export const engine = new Engine(renderer);
+export const engine = new Engine();
