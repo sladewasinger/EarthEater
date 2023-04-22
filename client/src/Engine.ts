@@ -51,7 +51,8 @@ export class Engine {
                 reject(new Error('Timeout: lobbyJoined event not received within 5 seconds'));
             }, 5000);
 
-            this.socket.emit('createLobby', null, (lobbyId: string) => {
+            this.socket.emit('createLobby', null, (lobby: any) => {
+                const lobbyId = lobby.id;
                 console.log("Lobby created", lobbyId);
                 clearTimeout(timeout);
                 this.lobbyId = lobbyId;

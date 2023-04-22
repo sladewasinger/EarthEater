@@ -8,19 +8,11 @@ const state = reactive({
     isInLobby: false,
 });
 
-function lobbyCreated() {
-    state.isInLobby = true;
-    const event = new CustomEvent("createLobby");
-    document.dispatchEvent(event);
-
-    engine.createLobby();
-
-}
 </script>
 
 <template>
     <div class="container" v-if="!state.isInLobby">
-        <CreateLobby @createLobby="lobbyCreated" />
+        <CreateLobby />
         <div>
             <h2 class="or">- OR -</h2>
         </div>

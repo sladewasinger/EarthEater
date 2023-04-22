@@ -3,12 +3,10 @@ import { engine } from '../main';
 import { useRouter } from 'vue-router';
 
 const router = useRouter();
-const emit = defineEmits(['createLobby']);
 
 function createLobby(e: Event) {
     e.preventDefault();
     console.log('Creating lobby...');
-    emit('createLobby');
     const promise = engine.createLobby();
     promise.then((lobbyId: string) => {
         console.log('Lobby created with id: ' + lobbyId);
