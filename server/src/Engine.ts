@@ -3,26 +3,8 @@ import { createServer, Server } from "http";
 import { Server as SocketIOServer, Socket } from "socket.io";
 import * as path from "path";
 import cors from "cors";
-
-export class Player {
-    id: string;
-    name: string;
-    constructor(id: string, name: string) {
-        this.id = id;
-        this.name = name;
-    }
-}
-
-export class Lobby {
-    id: string;
-    players: Player[];
-    owner: Player;
-
-    constructor(id: string) {
-        this.id = id;
-        this.players = [];
-    }
-}
+import { Lobby } from "./models/Lobby";
+import { Player } from "./models/Player";
 
 export class Engine {
     app: express.Application;
