@@ -5,6 +5,7 @@ import * as path from "path";
 import cors from "cors";
 import { Lobby } from "./models/Lobby";
 import { Player } from "./models/Player";
+import { SocketResponse } from "../../shared/SocketResponse";
 
 export class Engine {
     app: express.Application;
@@ -13,6 +14,8 @@ export class Engine {
     players: Player[] = [];
     lobbies: Lobby[] = [];
     lobbyIdCounter: number = 0;
+
+    public isConnected: boolean = false;
 
     constructor() {
         this.app = express();
@@ -44,6 +47,8 @@ export class Engine {
 
     private bindEvents(): void {
         this.io.on("connection", (socket: Socket) => {
+            this.isConnected = true;
+
             console.log("New client connected");
             const player = new Player(socket.id, "Player");
             this.players.push(player);
@@ -64,13 +69,30 @@ export class Engine {
             });
 
             socket.on("createLobby", (data: any, callback) => {
+                console.log("createLobby data:", data);
                 const player = this.players.find((player) => player.id === socket.id);
                 const lobby = new Lobby((this.lobbyIdCounter++).toString());
                 lobby.players.push(player);
                 lobby.owner = player;
                 this.lobbies.push(lobby);
-                callback(lobby);
+                callback(SocketResponse.success(lobby));
             });
+
+            socket.on('joinLobby', (data: any, callback) => {
+                console.log("Received lobbyId:", data);
+                const player = this.players.find((player) => player.id === socket.id);
+                const lobby = this.lobbies.find((lobby) => lobby.id === data.lobbyId);
+                if (lobby) {
+                    lobby.players.push(player);
+                    callback(SocketResponse.success(lobby));
+                } else {
+                    callback(SocketResponse.error("Lobby not found"));
+                }
+            });
+        });
+
+        this.io.on("disconnect", () => {
+            this.isConnected = false;
         });
     }
 }

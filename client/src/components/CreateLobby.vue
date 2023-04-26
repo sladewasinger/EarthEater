@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { SocketResponse } from '../../../shared/SocketResponse';
 import { engine } from '../main';
 import { useRouter } from 'vue-router';
 
@@ -8,9 +9,12 @@ function createLobby(e: Event) {
     e.preventDefault();
     console.log('Creating lobby...');
     const promise = engine.createLobby();
-    promise.then((lobbyId: string) => {
-        console.log('Lobby created with id: ' + lobbyId);
-        router.push('/lobby/' + lobbyId);
+    promise.then((data: SocketResponse) => {
+        if (data.error) {
+            console.log('Error creating lobby: ' + data.error);
+            return;
+        }
+        router.push('/lobby/' + data.data.id);
     });
 }
 </script>

@@ -22,8 +22,9 @@ const router = createRouter({
     routes, // short for `routes: routes`
 })
 
+export const engine = new Engine();
+
 const app = createApp(App);
 app.use(router);
 app.mount('#app');
 
-export const engine = new Engine();

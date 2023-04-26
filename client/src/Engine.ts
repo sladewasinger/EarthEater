@@ -7,6 +7,7 @@ import { Explosion } from "./models/Explosion";
 import { MathUtils } from "./models/MathUtils";
 import { Missile } from "./models/Missile";
 import * as socketio from "socket.io-client";
+import { SocketResponse } from "../../shared/SocketResponse";
 
 export class EngineState {
     fireDelay: number = 1000;
@@ -18,7 +19,7 @@ export class EngineState {
     debug: boolean = false;
 }
 
-export class Engine {
+export class Engine extends EventTarget {
     fps: number = 60;
     gameState: GameState;
     engineState: EngineState = new EngineState();
@@ -27,8 +28,12 @@ export class Engine {
     started: boolean = false;
     lobbyId: string | undefined;
     renderer: Renderer | undefined;
+    isConnected: boolean = false;
+    intervalId: NodeJS.Timer | undefined;
 
     constructor() {
+        super();
+
         let hostname = "eartheater.azurewebsites.net";
         let port = 80;
         if (window.location.hostname === "localhost") {
@@ -41,37 +46,54 @@ export class Engine {
 
         window.addEventListener('keydown', this.onKeyDown.bind(this));
         window.addEventListener('keyup', this.onKeyUp.bind(this));
+
+        this.bindSocketEvents();
+    }
+
+    bindSocketEvents(): void {
+        this.socket.on("connect", () => {
+            this.isConnected = true;
+            this.dispatchEvent(new Event("connected"));
+        });
+
+        this.socket.on("disconnect", () => {
+            this.isConnected = false;
+            this.dispatchEvent(new Event("disconnected"));
+        });
     }
 
     createLobby() {
-        console.log("Create lobby");
-
-        return new Promise<string>((resolve, reject) => {
+        return new Promise<SocketResponse>((resolve, reject) => {
             const timeout = setTimeout(() => {
-                reject(new Error('Timeout: lobbyJoined event not received within 5 seconds'));
+                reject(new Error('Timeout: createLobby response not received within 5 seconds'));
             }, 5000);
 
-            this.socket.emit('createLobby', null, (lobby: any) => {
-                const lobbyId = lobby.id;
-                console.log("Lobby created", lobbyId);
+            this.socket.emit('createLobby', null, (data: any) => {
+                if (data.error) {
+                    reject(data.error);
+                    return;
+                }
+
                 clearTimeout(timeout);
-                this.lobbyId = lobbyId;
-                resolve(lobbyId);
+                this.lobbyId = data.id;
+                resolve(data);
             });
         });
     }
 
-    joinLobby(lobbyId: string): Promise<string> {
-        console.log("Join lobby", lobbyId);
-        this.socket.emit('joinLobby', { id: lobbyId });
-
-        return new Promise<string>((resolve, reject) => {
+    joinLobby(lobbyId: string): Promise<SocketResponse> {
+        return new Promise<SocketResponse>((resolve, reject) => {
             // Set a 5 second timeout
             const timeout = setTimeout(() => {
-                reject(new Error('Timeout: lobbyJoined event not received within 5 seconds'));
+                reject(new Error('Timeout: joinLobby response not received within 5 seconds'));
             }, 5000);
 
-            this.socket.once('lobbyJoined', (data: any) => {
+            this.socket.emit('joinLobby', { lobbyId: lobbyId }, (data: any) => {
+                if (data.error) {
+                    reject(data.error);
+                    return;
+                }
+
                 console.log(data);
                 clearTimeout(timeout);
                 resolve(data);
@@ -93,6 +115,9 @@ export class Engine {
     }
 
     public reset() {
+        clearInterval(this.intervalId);
+        this.intervalId = undefined;
+
         this.renderer?.delete();
         delete this.renderer;
 
@@ -139,7 +164,7 @@ export class Engine {
         window.addEventListener('resize', () => this.centerCameraOnScreen());
         this.centerCameraOnScreen();
 
-        setInterval(() => {
+        this.intervalId = setInterval(() => {
             this.update();
         }, 1000 / this.fps);
     }

@@ -1,4 +1,8 @@
 {
+    "include": [
+        "src/**/*",
+        "../shared/**/*"
+    ],
     "compilerOptions": {
         "module": "commonjs",
         "esModuleInterop": true,

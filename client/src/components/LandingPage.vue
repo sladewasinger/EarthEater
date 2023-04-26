@@ -2,7 +2,6 @@
 import CreateLobby from './CreateLobby.vue';
 import JoinLobby from './JoinLobby.vue';
 import { reactive } from "vue";
-import { engine } from '../main.ts';
 
 const state = reactive({
     isInLobby: false,
