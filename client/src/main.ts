@@ -1,7 +1,6 @@
 import './style.css'
 
 import { Engine } from './Engine';
-import { Renderer } from "./Renderer";
 import { createApp } from 'vue';
 import LandingPage from './components/LandingPage.vue';
 import Lobby from './components/Lobby.vue';

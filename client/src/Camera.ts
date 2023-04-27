@@ -1,4 +1,4 @@
-import { Vector } from "./models/Vector";
+import { Vector } from "../../shared/Vector";
 
 
 export class Camera {

@@ -1,4 +1,4 @@
-import { Vector } from "./Vector";
+import { Vector } from "../../../shared/Vector";
 
 export class Mouse {
     position: Vector = new Vector(0, 0);

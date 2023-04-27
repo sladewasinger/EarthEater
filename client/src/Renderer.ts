@@ -1,9 +1,9 @@
 import { Camera } from "./Camera";
-import { Explosion } from "./models/Explosion";
-import { Vector } from "./models/Vector";
-import { GameState } from "./models/GameState";
-import { MathUtils } from "./models/MathUtils";
-import { Missile } from "./models/Missile";
+import { Explosion } from "../../shared/Explosion";
+import { Vector } from "../../shared/Vector";
+import { GameState } from "../../shared/GameState";
+import { MathUtils } from "../../shared/MathUtils";
+import { Missile } from "../../shared/Missile";
 
 class Cloud {
     constructor(public position: Vector, public radius: number) { }

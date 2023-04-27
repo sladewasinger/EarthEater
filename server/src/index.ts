@@ -1,3 +1,3 @@
-import { Engine } from "./Engine";
-
-new Engine();
+import { Server } from "./Server";
+const server = new Server();
+server.setup();

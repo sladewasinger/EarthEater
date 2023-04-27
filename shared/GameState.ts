@@ -1,12 +1,10 @@
 import { Explosion } from "./Explosion";
 import { Missile } from "./Missile";
 import { Vector } from "./Vector";
-import { GridTile } from "./GridTile";
 import { Player } from "./Player";
 
 export class GameState {
     frame: number = 0;
-    grid: GridTile[][] = [];
     players: Player[] = [];
     inputs: { [key: string]: boolean } = {};
     explosions: Explosion[] = [];

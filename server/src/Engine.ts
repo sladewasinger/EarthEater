@@ -1,99 +1,367 @@
-import express from "express";
-import { createServer, Server } from "http";
-import { Server as SocketIOServer, Socket } from "socket.io";
-import * as path from "path";
-import cors from "cors";
-import { Lobby } from "./models/Lobby";
-import { Player } from "./models/Player";
+import { EngineState } from "../../shared/EngineState";
+import { Explosion } from "../../shared/Explosion";
+import { GameState } from "../../shared/GameState";
+import { MathUtils } from "../../shared/MathUtils";
+import { Missile } from "../../shared/Missile";
+import { Player } from "../../shared/Player";
 import { SocketResponse } from "../../shared/SocketResponse";
+import { Vector } from "../../shared/Vector";
+import { Socket } from "socket.io";
 
 export class Engine {
-    app: express.Application;
-    server: Server;
-    io: SocketIOServer;
-    players: Player[] = [];
-    lobbies: Lobby[] = [];
-    lobbyIdCounter: number = 0;
+    fps: number = 60;
+    gameState: GameState;
+    engineState: EngineState = new EngineState();
+    socket: Socket;
+    started: boolean = false;
+    lobbyId: string | undefined;
+    isConnected: boolean = false;
+    intervalId: NodeJS.Timer | undefined;
 
-    public isConnected: boolean = false;
+    constructor(socket: Socket) {
+        let hostname = "eartheater.azurewebsites.net";
+        let port = 80;
+        if (window.location.hostname === "localhost") {
+            port = 3000;
+            hostname = "localhost";
+        }
+        this.socket = socket;
+        this.gameState = new GameState();
 
-    constructor() {
-        this.app = express();
-        this.server = createServer(this.app);
-        this.io = new SocketIOServer(this.server, {
-            cors: {
-                origin: [
-                    "http://localhost:5173",
-                    "https://sladewasinger.github.io/EarthEater"
-                ],
-                methods: ["GET", "POST"],
-            },
-        });
-        this.configure();
-        this.bindEvents();
-
-        const port = process.env.PORT || 3000;
-        this.server.listen(port, () => {
-            console.log(`Server started on port ${port}`);
-        });
+        this.bindSocketEvents();
     }
 
-    private configure(): void {
-        // Configure express middleware, routes, etc.
-        this.app.get('/', (req, res) => {
-            res.send('Welcome to the server. There is nothing to see here.')
-        })
+    bindSocketEvents(): void {
+
     }
 
-    private bindEvents(): void {
-        this.io.on("connection", (socket: Socket) => {
-            this.isConnected = true;
+    createLobby() {
+        return new Promise<SocketResponse>((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                reject(new Error('Timeout: createLobby response not received within 5 seconds'));
+            }, 5000);
 
-            console.log("New client connected");
-            const player = new Player(socket.id, "Player");
-            this.players.push(player);
-
-            // Handle socket events here
-            socket.on("event", (data: any) => {
-                console.log("Received data:", data);
-                // Broadcast the data to all clients
-                this.io.emit("event", data);
-            });
-
-            socket.on("disconnect", () => {
-                console.log("Client disconnected");
-                this.players = this.players.filter((player) => player.id !== socket.id);
-                this.lobbies.forEach((lobby) => {
-                    lobby.players = lobby.players.filter((player) => player.id !== socket.id);
-                });
-            });
-
-            socket.on("createLobby", (data: any, callback) => {
-                console.log("createLobby data:", data);
-                const player = this.players.find((player) => player.id === socket.id);
-                const lobby = new Lobby((this.lobbyIdCounter++).toString());
-                lobby.players.push(player);
-                lobby.owner = player;
-                this.lobbies.push(lobby);
-                callback(SocketResponse.success(lobby));
-            });
-
-            socket.on('joinLobby', (data: any, callback) => {
-                console.log("Received lobbyId:", data);
-                const player = this.players.find((player) => player.id === socket.id);
-                const lobby = this.lobbies.find((lobby) => lobby.id === data.lobbyId);
-                if (lobby) {
-                    lobby.players.push(player);
-                    callback(SocketResponse.success(lobby));
-                } else {
-                    callback(SocketResponse.error("Lobby not found"));
+            this.socket.emit('createLobby', null, (data: any) => {
+                if (data.error) {
+                    reject(data.error);
+                    return;
                 }
+
+                clearTimeout(timeout);
+                this.lobbyId = data.id;
+                resolve(data);
             });
         });
+    }
 
-        this.io.on("disconnect", () => {
-            this.isConnected = false;
+    joinLobby(lobbyId: string): Promise<SocketResponse> {
+        return new Promise<SocketResponse>((resolve, reject) => {
+            // Set a 5 second timeout
+            const timeout = setTimeout(() => {
+                reject(new Error('Timeout: joinLobby response not received within 5 seconds'));
+            }, 5000);
+
+            this.socket.emit('joinLobby', { lobbyId: lobbyId }, (data: any) => {
+                if (data.error) {
+                    reject(data.error);
+                    return;
+                }
+
+                console.log(data);
+                clearTimeout(timeout);
+                resolve(data);
+            });
         });
+    }
+
+    get myPlayer() {
+        return this.gameState.players.find(p => p.id === this.engineState.myPlayerId);
+    }
+
+    onKeyUp(e: KeyboardEvent): any {
+        this.gameState.inputs[e.key.toLowerCase()] = false;
+        this.handleImmediateInput(e.key);
+    }
+
+    onKeyDown(e: KeyboardEvent): any {
+        this.gameState.inputs[e.key.toLowerCase()] = true;
+    }
+
+    public reset() {
+        clearInterval(this.intervalId);
+        this.intervalId = undefined;
+
+        this.started = false;
+        this.gameState = new GameState();
+    }
+
+    public async start() {
+        if (this.started) {
+            console.log("Engine already started");
+            return;
+        }
+
+        this.started = true;
+
+        this.gameState.terrainMesh = await this.createTerrainMesh();
+        if (this.gameState.isSand) {
+            while (this.smoothTerrain()) { /* keep smoothing until there are no more changes */ }
+        }
+        const player = new Player('id1', 'Player 1');
+        player.color = 'blue';
+        player.position = new Vector(505, 300);
+        this.gameState.players.push(player);
+        this.engineState.myPlayerId = player.id;
+
+        const player2 = new Player('id2', 'Player 2');
+        player2.color = 'red';
+        player2.position = new Vector(800, 300);
+        this.gameState.players.push(player2);
+
+        this.intervalId = setInterval(() => {
+            this.update();
+        }, 1000 / this.fps);
+    }
+
+    public update() {
+        const now = Date.now();
+        const dt = Math.min(now - this.gameState.lastUpdate, 1000 / 20);
+
+        this.gameState.frame++;
+
+        // apply gravity
+        for (let player of this.gameState.players) {
+            player.position.y += this.gameState.gravity.y * dt / 1000;
+
+            // resolve player ground collision
+            // land on lines between points
+
+            for (let i = 0; i < this.gameState.terrainMesh.length - 1; i++) {
+                let point1 = this.gameState.terrainMesh[i];
+                let point2 = this.gameState.terrainMesh[i + 1];
+                let slope = (point2.y - point1.y) / (point2.x - point1.x);
+                let yIntercept = point1.y - slope * point1.x;
+                let playerX = player.position.x + player.hitBox.x * 0.5;
+                let y = slope * playerX + yIntercept;
+                if (playerX >= point1.x && playerX <= point2.x && player.position.y >= y - player.hitBox.y) {
+                    player.position.y = y - player.hitBox.y;
+                }
+            }
+
+        }
+
+        this.handlePlayerInput(dt);
+
+        // update explosions
+        for (let i = 0; i < this.gameState.explosions.length; i++) {
+            let explosion = this.gameState.explosions[i];
+
+            if (!explosion.isExploded) {
+                // "explode" & move terrain points
+                let explosionRadius = explosion.radius;
+                let explosionPos = explosion.position;
+                for (let point of this.gameState.terrainMesh) {
+                    if (point.x >= explosionPos.x - explosionRadius && point.x <= explosionPos.x + explosionRadius) {
+                        let yPos = explosionPos.y + Math.sqrt(Math.pow(explosionRadius, 2) - Math.pow(point.x - explosionPos.x, 2));
+                        point.y = Math.min(this.gameState.worldHeight, Math.max(point.y, yPos));
+                    }
+                }
+
+                // damage players
+                for (let player of this.gameState.players) {
+                    if (MathUtils.circleCollidesWithBox(explosionPos, explosionRadius, player.position, player.hitBox)) {
+                        player.health -= explosion.damage;
+                    }
+                }
+            }
+
+            explosion.update(dt);
+            if (explosion.timeLeftMs <= 0) {
+                this.gameState.explosions.splice(i, 1);
+            }
+        }
+
+        // blow up dead players
+        for (let player of this.gameState.players) {
+            if (player.isDead && !player.exploded) {
+                player.exploded = true;
+                this.createExplosion(player.position, 100, 40);
+                //this.gameState.players.splice(this.gameState.players.indexOf(player), 1);
+            }
+        }
+
+        if (this.gameState.isSand) {
+            this.smoothTerrain();
+        }
+
+
+        // update missiles
+        for (let missile of this.gameState.missiles) {
+            missile.update(dt, this.gameState);
+            if (missile.isExploded || missile.elapsedTime > this.engineState.maxMissileTimeMs) {
+                this.gameState.missiles.splice(this.gameState.missiles.indexOf(missile), 1);
+                this.createExplosion(missile.position, missile.explosionRadius, missile.damage);
+            }
+        }
+
+        this.gameState.lastUpdate = now;
+    }
+
+    private smoothTerrain() {
+        let changesMade = false;
+
+        for (let i = 0; i < this.gameState.terrainMesh.length - 3; i++) {
+            let point = this.gameState.terrainMesh[i];
+            let nextPoint = this.gameState.terrainMesh[i + 1];
+            if (nextPoint) {
+                let diff = nextPoint.y - point.y;
+                let maxPeak = 5;
+                if (Math.abs(diff) > maxPeak) {
+                    point.y += diff / 2;
+                    nextPoint.y -= diff / 2;
+                    changesMade = true;
+                }
+            }
+        }
+
+        return changesMade;
+    }
+
+    private createExplosion(pos: Vector, radius: number, damage: number) {
+        let explosion = new Explosion(pos, radius, 1000, damage);
+        this.gameState.explosions.push(explosion);
+    }
+
+    private fireMissile(pos: Vector, velocity: Vector) {
+        let missile = new Missile(pos, velocity, 5, 20, 25);
+        this.gameState.missiles.push(missile);
+    }
+
+    private handlePlayerInput(dt: number) {
+        if (!this.myPlayer || this.myPlayer.isDead || this.gameState.players[this.gameState.currentPlayerIndex] !== this.myPlayer) {
+            return;
+        }
+
+        const maxSlope = 2;
+        const speed = 20;
+        let direction = 0;
+        if (this.gameState.inputs['d']) {
+            direction = 1;
+        }
+        if (this.gameState.inputs['a']) {
+            direction = -1;
+        }
+        if (direction !== 0) {
+            // check slope of adjacent terrain points and halt movement if slope is too steep
+            let player = this.myPlayer!;
+            let playerPos = new Vector(player.position.x + player.hitBox.x / 2, player.position.y);
+            let terrainMesh = this.gameState.terrainMesh;
+            let terrainPoint = [...terrainMesh]
+                .filter(a => a.x >= playerPos.x && a.x <= playerPos.x + player.hitBox.x)
+                .sort((a, b) => Vector.distance(a, playerPos) - Vector.distance(b, playerPos))[0];
+            if (terrainPoint) {
+                let terrainPointIndex = terrainMesh.indexOf(terrainPoint);
+                let nextTerrainPoint = terrainMesh[terrainPointIndex + direction];
+                if (nextTerrainPoint) {
+                    let slope = (nextTerrainPoint.y - terrainPoint.y) / (nextTerrainPoint.x - terrainPoint.x);
+                    if (direction === -1 && slope < maxSlope || direction === 1 && slope > -maxSlope) {
+                        this.myPlayer!.position.x += direction * speed * dt / 1000;
+                    }
+                }
+            }
+        }
+
+        let angleAdjustment = 0;
+
+        if (this.gameState.inputs['q']) {
+            angleAdjustment = -0.001;
+            if (this.gameState.inputs["shift"]) {
+                angleAdjustment *= 10;
+            }
+        }
+        if (this.gameState.inputs['e']) {
+            angleAdjustment = 0.001;
+            if (this.gameState.inputs["shift"]) {
+                angleAdjustment *= 10;
+            }
+        }
+        if (angleAdjustment !== 0) {
+            this.myPlayer.facingAngle += angleAdjustment;
+            this.myPlayer.facingAngle = MathUtils.clamp(this.myPlayer.facingAngle, Math.PI, 2 * Math.PI);
+        }
+
+        if (this.gameState.inputs['w']) {
+            this.myPlayer.power += 2;
+            this.myPlayer.power = MathUtils.clamp(this.myPlayer.power, this.engineState.minCanonVelocity, this.engineState.maxCanonVelocity);
+        }
+        if (this.gameState.inputs['s']) {
+            this.myPlayer.power -= 2;
+            this.myPlayer.power = MathUtils.clamp(this.myPlayer.power, this.engineState.minCanonVelocity, this.engineState.maxCanonVelocity);
+        }
+
+        if (this.gameState.inputs[' '] && !this.engineState.fireDebounce) {
+            this.engineState.fireDebounce = true;
+            setTimeout(() => {
+                this.engineState.fireDebounce = false;
+            }, this.engineState.fireDelay);
+
+            this.fireMissile(this.myPlayer.getCanonTipPosition(), this.myPlayer.getCanonTipVelocity());
+        }
+    }
+
+    toggleDebug() {
+        this.engineState.debug = !this.engineState.debug;
+    }
+
+    handleImmediateInput(key: string) {
+    }
+
+    private async createTerrainMesh(): Promise<Vector[]> {
+        let worldWidth = this.gameState.worldWidth;
+        let worldHeight = this.gameState.worldHeight;
+        let minHeight = 200; // Define the minimum height of the terrain here
+        let maxHeight = worldHeight - 200; // Define the maximum height of the terrain here
+        let startPos = new Vector(0, Math.round(worldHeight / 2));
+        let endPosX = worldWidth;
+
+        let terrainMesh = <Vector[]>[];
+        terrainMesh.push(startPos);
+
+        let resolution = 5; // space between points
+
+        // implement midpoint displacement algorithm
+        let points = [startPos, new Vector(endPosX, startPos.y)];
+
+        const roughness = 0.4;
+
+        let displacement = worldHeight;
+
+        while (points.length < Math.floor(worldWidth / resolution)) {
+            for (let i = 0; i < points.length - 1; i += 2) {
+                let p1 = points[i];
+                let p2 = points[i + 1];
+                let mid = new Vector((p1.x + p2.x) / 2, (p1.y + p2.y) / 2);
+
+                //let displacement = Math.abs(p1.y - p2.y) * roughness;
+
+                mid.y += MathUtils.random(-displacement, displacement);
+                mid.y = Math.max(minHeight, Math.min(maxHeight, mid.y));
+
+                points.splice(i + 1, 0, mid);
+                //await this.sleep(1);
+
+                this.gameState.terrainMesh = points;
+            }
+            displacement *= roughness;
+        }
+        terrainMesh.push(...points);
+        terrainMesh.push(new Vector(endPosX, startPos.y));
+
+        const bottomRight = new Vector(worldWidth, worldHeight);
+        const bottomLeft = new Vector(0, worldHeight);
+        terrainMesh.push(bottomRight);
+        terrainMesh.push(bottomLeft);
+
+        return terrainMesh;
     }
 }
-

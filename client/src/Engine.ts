@@ -1,23 +1,14 @@
-import { GameState } from "./models/GameState";
+import { GameState } from "../../shared/GameState";
 import { Renderer } from "./Renderer";
-import { Vector } from "./models/Vector";
-import { Player } from "./models/Player";
+import { Vector } from "../../shared/Vector";
+import { Player } from "../../shared/Player";
 import { Mouse } from "./models/Mouse";
-import { Explosion } from "./models/Explosion";
-import { MathUtils } from "./models/MathUtils";
-import { Missile } from "./models/Missile";
+import { Explosion } from "../../shared/Explosion";
+import { MathUtils } from "../../shared/MathUtils";
+import { Missile } from "../../shared/Missile";
 import * as socketio from "socket.io-client";
 import { SocketResponse } from "../../shared/SocketResponse";
-
-export class EngineState {
-    fireDelay: number = 1000;
-    fireDebounce: boolean = false;
-    myPlayerId: string | undefined;
-    maxMissileTimeMs: number = 5000;
-    maxCanonVelocity: number = 1000;
-    minCanonVelocity: number = 50;
-    debug: boolean = false;
-}
+import { EngineState } from "../../shared/EngineState";
 
 export class Engine extends EventTarget {
     fps: number = 60;
