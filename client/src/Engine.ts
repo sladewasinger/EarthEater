@@ -51,6 +51,12 @@ export class Engine extends EventTarget {
             this.isConnected = false;
             this.dispatchEvent(new Event("disconnected"));
         });
+
+        this.socket.on('gameStateUpdate', (socketResponse: any) => {
+            console.log('gameStateUpdate', socketResponse);
+            const data = socketResponse.data;
+            this.gameState = data.gameState;
+        });
     }
 
     createLobby() {
@@ -98,11 +104,16 @@ export class Engine extends EventTarget {
 
     onKeyUp(e: KeyboardEvent): any {
         this.gameState.inputs[e.key.toLowerCase()] = false;
-        this.handleImmediateInput(e.key);
+
+        this.socket.emit('keyUp', e.key.toLowerCase());
+
+        this.handleImmediateInput(e.key.toLowerCase());
     }
 
     onKeyDown(e: KeyboardEvent): any {
         this.gameState.inputs[e.key.toLowerCase()] = true;
+
+        this.socket.emit('keyDown', e.key.toLowerCase());
     }
 
     public reset() {
@@ -127,23 +138,27 @@ export class Engine extends EventTarget {
 
         this.started = true;
 
+        this.socket.emit('startGame', null, (data: any) => {
+            console.log(data);
+        });
+
         this.renderer = new Renderer();
         this.mouse = new Mouse(this.renderer.canvas);
 
-        this.gameState.terrainMesh = await this.createTerrainMesh();
-        if (this.gameState.isSand) {
-            while (this.smoothTerrain()) { /* keep smoothing until there are no more changes */ }
-        }
-        const player = new Player('id1', 'Player 1');
-        player.color = 'blue';
-        player.position = new Vector(505, 300);
-        this.gameState.players.push(player);
-        this.engineState.myPlayerId = player.id;
+        // this.gameState.terrainMesh = await this.createTerrainMesh();
+        // if (this.gameState.isSand) {
+        //     while (this.smoothTerrain()) { /* keep smoothing until there are no more changes */ }
+        // }
+        // const player = new Player('id1', 'Player 1');
+        // player.color = 'blue';
+        // player.position = new Vector(505, 300);
+        // this.gameState.players.push(player);
+        // this.engineState.myPlayerId = player.id;
 
-        const player2 = new Player('id2', 'Player 2');
-        player2.color = 'red';
-        player2.position = new Vector(800, 300);
-        this.gameState.players.push(player2);
+        // const player2 = new Player('id2', 'Player 2');
+        // player2.color = 'red';
+        // player2.position = new Vector(800, 300);
+        // this.gameState.players.push(player2);
 
         // zoom out canvas to fit screen
         if (this.renderer.canvas.width / this.gameState.worldWidth > this.renderer.canvas.height / this.gameState.worldHeight)

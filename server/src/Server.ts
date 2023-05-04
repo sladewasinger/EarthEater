@@ -4,7 +4,7 @@ import { Server as SocketIOServer, Socket } from "socket.io";
 import { Lobby } from "./models/Lobby";
 import { Player } from "../../shared/Player";
 import { SocketResponse } from "../../shared/SocketResponse";
-
+import { Engine } from "./Engine";
 
 export class Server {
     app: express.Application;
@@ -14,7 +14,7 @@ export class Server {
     lobbies: Lobby[] = [];
     lobbyIdCounter: number = 0;
 
-    public setup(): void {
+    constructor() {
         this.app = express();
         this.server = createServer(this.app);
         this.io = new SocketIOServer(this.server, {
@@ -83,6 +83,35 @@ export class Server {
                     callback(SocketResponse.success(lobby));
                 } else {
                     callback(SocketResponse.error("Lobby not found"));
+                }
+            });
+
+            socket.on('startGame', (data: any, callback) => {
+                const player = this.players.find((player) => player.id === socket.id);
+                const lobby = this.lobbies.find((lobby) => lobby.players.find((p) => p.id === player.id));
+                if (lobby && lobby.owner.id === player.id) {
+                    lobby.engine = new Engine(socket);
+                    lobby.engine.start(lobby.players);
+                    console.log('starting game')
+                    callback(SocketResponse.success(lobby.id));
+                } else {
+                    callback(SocketResponse.error("Lobby not found"));
+                }
+            });
+
+            socket.on('keyDown', (key: any) => {
+                const player = this.players.find((player) => player.id === socket.id);
+                const lobby = this.lobbies.find((lobby) => lobby.players.find((p) => p.id === player.id));
+                if (lobby && player) {
+                    lobby.engine?.handleKeyDown(key, player);
+                }
+            });
+
+            socket.on('keyUp', (data: any) => {
+                const player = this.players.find((player) => player.id === socket.id);
+                const lobby = this.lobbies.find((lobby) => lobby.players.find((p) => p.id === player.id));
+                if (lobby && player) {
+                    lobby.engine?.handleKeyUp(data, player);
                 }
             });
         });

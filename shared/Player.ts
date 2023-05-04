@@ -11,6 +11,7 @@ export class Player {
     canonLength: number = 20;
     power: number = 500;
     exploded: boolean = false;
+    inputs: { [key: string]: boolean } = {};
 
     constructor(id: string, name: string) {
         this.id = id;

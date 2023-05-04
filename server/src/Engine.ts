@@ -19,72 +19,8 @@ export class Engine {
     intervalId: NodeJS.Timer | undefined;
 
     constructor(socket: Socket) {
-        let hostname = "eartheater.azurewebsites.net";
-        let port = 80;
-        if (window.location.hostname === "localhost") {
-            port = 3000;
-            hostname = "localhost";
-        }
         this.socket = socket;
         this.gameState = new GameState();
-
-        this.bindSocketEvents();
-    }
-
-    bindSocketEvents(): void {
-
-    }
-
-    createLobby() {
-        return new Promise<SocketResponse>((resolve, reject) => {
-            const timeout = setTimeout(() => {
-                reject(new Error('Timeout: createLobby response not received within 5 seconds'));
-            }, 5000);
-
-            this.socket.emit('createLobby', null, (data: any) => {
-                if (data.error) {
-                    reject(data.error);
-                    return;
-                }
-
-                clearTimeout(timeout);
-                this.lobbyId = data.id;
-                resolve(data);
-            });
-        });
-    }
-
-    joinLobby(lobbyId: string): Promise<SocketResponse> {
-        return new Promise<SocketResponse>((resolve, reject) => {
-            // Set a 5 second timeout
-            const timeout = setTimeout(() => {
-                reject(new Error('Timeout: joinLobby response not received within 5 seconds'));
-            }, 5000);
-
-            this.socket.emit('joinLobby', { lobbyId: lobbyId }, (data: any) => {
-                if (data.error) {
-                    reject(data.error);
-                    return;
-                }
-
-                console.log(data);
-                clearTimeout(timeout);
-                resolve(data);
-            });
-        });
-    }
-
-    get myPlayer() {
-        return this.gameState.players.find(p => p.id === this.engineState.myPlayerId);
-    }
-
-    onKeyUp(e: KeyboardEvent): any {
-        this.gameState.inputs[e.key.toLowerCase()] = false;
-        this.handleImmediateInput(e.key);
-    }
-
-    onKeyDown(e: KeyboardEvent): any {
-        this.gameState.inputs[e.key.toLowerCase()] = true;
     }
 
     public reset() {
@@ -95,7 +31,7 @@ export class Engine {
         this.gameState = new GameState();
     }
 
-    public async start() {
+    public async start(players: Player[]) {
         if (this.started) {
             console.log("Engine already started");
             return;
@@ -107,16 +43,8 @@ export class Engine {
         if (this.gameState.isSand) {
             while (this.smoothTerrain()) { /* keep smoothing until there are no more changes */ }
         }
-        const player = new Player('id1', 'Player 1');
-        player.color = 'blue';
-        player.position = new Vector(505, 300);
-        this.gameState.players.push(player);
-        this.engineState.myPlayerId = player.id;
 
-        const player2 = new Player('id2', 'Player 2');
-        player2.color = 'red';
-        player2.position = new Vector(800, 300);
-        this.gameState.players.push(player2);
+        this.gameState.players = players;
 
         this.intervalId = setInterval(() => {
             this.update();
@@ -194,7 +122,6 @@ export class Engine {
             this.smoothTerrain();
         }
 
-
         // update missiles
         for (let missile of this.gameState.missiles) {
             missile.update(dt, this.gameState);
@@ -204,7 +131,99 @@ export class Engine {
             }
         }
 
+        this.sendClientUpdate();
+
         this.gameState.lastUpdate = now;
+    }
+
+    private sendClientUpdate() {
+        const data = {
+            gameState: this.gameState
+        };
+        const response = SocketResponse.success(data);
+        this.socket.emit('gameStateUpdate', response);
+    }
+
+    public handleKeyUp(key: any, player: Player) {
+        console.log('key up', key)
+        const p = this.gameState.players.find(p => p.id === player.id);
+        if (p) {
+            p.inputs[key] = false;
+        }
+    }
+
+    public handleKeyDown(key: any, player: Player) {
+        console.log('key down', key)
+        const p = this.gameState.players.find(p => p.id === player.id);
+        console.log('p', p, 'player', player)
+        if (p) {
+            p.inputs[key] = true;
+        }
+    }
+
+    private handlePlayerInput(dt: number) {
+        for (let player of this.gameState.players) {
+            const inputs = player.inputs;
+
+            const maxSlope = 2;
+            const speed = 20;
+            let direction = 0;
+
+            if (inputs['d']) {
+                direction = 1;
+            }
+            if (inputs['a']) {
+                direction = -1;
+            }
+
+            if (direction !== 0) {
+                // check slope of adjacent terrain points and halt movement if slope is too steep
+                let playerPos = new Vector(player.position.x + player.hitBox.x / 2, player.position.y);
+                let terrainMesh = this.gameState.terrainMesh;
+                let terrainPoint = [...terrainMesh]
+                    .filter(a => a.x >= playerPos.x && a.x <= playerPos.x + player.hitBox.x)
+                    .sort((a, b) => Vector.distance(a, playerPos) - Vector.distance(b, playerPos))[0];
+                if (terrainPoint) {
+                    let terrainPointIndex = terrainMesh.indexOf(terrainPoint);
+                    let nextTerrainPoint = terrainMesh[terrainPointIndex + direction];
+                    if (nextTerrainPoint) {
+                        let slope = (nextTerrainPoint.y - terrainPoint.y) / (nextTerrainPoint.x - terrainPoint.x);
+                        if (direction === -1 && slope < maxSlope || direction === 1 && slope > -maxSlope) {
+                            player.position.x += direction * speed * dt / 1000;
+                        }
+                    }
+                }
+            }
+
+            let angleAdjustment = 0;
+
+            if (inputs['q']) {
+                angleAdjustment = -0.001;
+                if (inputs["shift"]) {
+                    angleAdjustment *= 10;
+                }
+            }
+            if (inputs['e']) {
+                angleAdjustment = 0.001;
+                if (inputs["shift"]) {
+                    angleAdjustment *= 10;
+                }
+            }
+
+            if (angleAdjustment !== 0) {
+                player.facingAngle += angleAdjustment;
+                player.facingAngle = MathUtils.clamp(player.facingAngle, Math.PI, 2 * Math.PI);
+            }
+
+            if (inputs['w']) {
+                player.power += 2;
+                player.power = MathUtils.clamp(player.power, this.engineState.minCanonVelocity, this.engineState.maxCanonVelocity);
+            }
+            if (inputs['s']) {
+                player.power -= 2;
+                player.power = MathUtils.clamp(player.power, this.engineState.minCanonVelocity, this.engineState.maxCanonVelocity);
+            }
+        }
     }
 
     private smoothTerrain() {
@@ -235,78 +254,6 @@ export class Engine {
     private fireMissile(pos: Vector, velocity: Vector) {
         let missile = new Missile(pos, velocity, 5, 20, 25);
         this.gameState.missiles.push(missile);
-    }
-
-    private handlePlayerInput(dt: number) {
-        if (!this.myPlayer || this.myPlayer.isDead || this.gameState.players[this.gameState.currentPlayerIndex] !== this.myPlayer) {
-            return;
-        }
-
-        const maxSlope = 2;
-        const speed = 20;
-        let direction = 0;
-        if (this.gameState.inputs['d']) {
-            direction = 1;
-        }
-        if (this.gameState.inputs['a']) {
-            direction = -1;
-        }
-        if (direction !== 0) {
-            // check slope of adjacent terrain points and halt movement if slope is too steep
-            let player = this.myPlayer!;
-            let playerPos = new Vector(player.position.x + player.hitBox.x / 2, player.position.y);
-            let terrainMesh = this.gameState.terrainMesh;
-            let terrainPoint = [...terrainMesh]
-                .filter(a => a.x >= playerPos.x && a.x <= playerPos.x + player.hitBox.x)
-                .sort((a, b) => Vector.distance(a, playerPos) - Vector.distance(b, playerPos))[0];
-            if (terrainPoint) {
-                let terrainPointIndex = terrainMesh.indexOf(terrainPoint);
-                let nextTerrainPoint = terrainMesh[terrainPointIndex + direction];
-                if (nextTerrainPoint) {
-                    let slope = (nextTerrainPoint.y - terrainPoint.y) / (nextTerrainPoint.x - terrainPoint.x);
-                    if (direction === -1 && slope < maxSlope || direction === 1 && slope > -maxSlope) {
-                        this.myPlayer!.position.x += direction * speed * dt / 1000;
-                    }
-                }
-            }
-        }
-
-        let angleAdjustment = 0;
-
-        if (this.gameState.inputs['q']) {
-            angleAdjustment = -0.001;
-            if (this.gameState.inputs["shift"]) {
-                angleAdjustment *= 10;
-            }
-        }
-        if (this.gameState.inputs['e']) {
-            angleAdjustment = 0.001;
-            if (this.gameState.inputs["shift"]) {
-                angleAdjustment *= 10;
-            }
-        }
-        if (angleAdjustment !== 0) {
-            this.myPlayer.facingAngle += angleAdjustment;
-            this.myPlayer.facingAngle = MathUtils.clamp(this.myPlayer.facingAngle, Math.PI, 2 * Math.PI);
-        }
-
-        if (this.gameState.inputs['w']) {
-            this.myPlayer.power += 2;
-            this.myPlayer.power = MathUtils.clamp(this.myPlayer.power, this.engineState.minCanonVelocity, this.engineState.maxCanonVelocity);
-        }
-        if (this.gameState.inputs['s']) {
-            this.myPlayer.power -= 2;
-            this.myPlayer.power = MathUtils.clamp(this.myPlayer.power, this.engineState.minCanonVelocity, this.engineState.maxCanonVelocity);
-        }
-
-        if (this.gameState.inputs[' '] && !this.engineState.fireDebounce) {
-            this.engineState.fireDebounce = true;
-            setTimeout(() => {
-                this.engineState.fireDebounce = false;
-            }, this.engineState.fireDelay);
-
-            this.fireMissile(this.myPlayer.getCanonTipPosition(), this.myPlayer.getCanonTipVelocity());
-        }
     }
 
     toggleDebug() {
