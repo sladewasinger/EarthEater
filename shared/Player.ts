@@ -1,4 +1,3 @@
-import { Socket } from "dgram";
 import { Vector } from "./Vector";
 
 export class Player {
