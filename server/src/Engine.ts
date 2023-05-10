@@ -3,24 +3,24 @@ import { Explosion } from "../../shared/Explosion";
 import { GameState } from "../../shared/GameState";
 import { MathUtils } from "../../shared/MathUtils";
 import { Missile } from "../../shared/Missile";
-import { Player } from "../../shared/Player";
 import { SocketResponse } from "../../shared/SocketResponse";
 import { Vector } from "../../shared/Vector";
 import { Socket } from "socket.io";
+import { ServerPlayer } from "./models/ServerPlayer";
+import { ServerGameState } from "./models/ServerGameState";
+import { Player } from "../../shared/Player";
 
 export class Engine {
     fps: number = 60;
-    gameState: GameState;
+    gameState: ServerGameState;
     engineState: EngineState = new EngineState();
-    socket: Socket;
     started: boolean = false;
     lobbyId: string | undefined;
     isConnected: boolean = false;
     intervalId: NodeJS.Timer | undefined;
 
-    constructor(socket: Socket) {
-        this.socket = socket;
-        this.gameState = new GameState();
+    constructor() {
+        this.reset();
     }
 
     public reset() {
@@ -28,10 +28,10 @@ export class Engine {
         this.intervalId = undefined;
 
         this.started = false;
-        this.gameState = new GameState();
+        this.gameState = new ServerGameState();
     }
 
-    public async start(players: Player[]) {
+    public async start(players: ServerPlayer[]) {
         if (this.started) {
             console.log("Engine already started");
             return;
@@ -138,20 +138,49 @@ export class Engine {
 
     private sendClientUpdate() {
         const data = {
-            gameState: this.gameState
+            gameState: <GameState>{
+                frame: this.gameState.frame,
+                players: this.gameState.players.map(p => <Player>{
+                    id: p.id,
+                    name: p.name,
+                    position: p.position,
+                    hitBox: p.hitBox,
+                    health: p.health,
+                    color: p.color,
+                    facingAngle: p.facingAngle,
+                    canonLength: p.canonLength,
+                    power: p.power,
+                    exploded: p.exploded,
+                    inputs: p.inputs,
+                }),
+                explosions: this.gameState.explosions,
+                missiles: this.gameState.missiles,
+                lastUpdate: this.gameState.lastUpdate,
+                terrainMesh: this.gameState.terrainMesh,
+                isSand: this.gameState.isSand,
+                worldWidth: this.gameState.worldWidth,
+                worldHeight: this.gameState.worldHeight,
+                gravity: this.gameState.gravity,
+                wind: this.gameState.wind,
+                currentPlayerIndex: this.gameState.currentPlayerIndex,
+            }
         };
+
         const response = SocketResponse.success(data);
-        this.socket.emit('gameStateUpdate', response);
+
+        for (const player of this.gameState.players) {
+            player.socket.emit('gameStateUpdate', response);
+        }
     }
 
-    public handleKeyUp(key: any, player: Player) {
+    public handleKeyUp(key: any, player: ServerPlayer) {
         const p = this.gameState.players.find(p => p.id === player.id);
         if (p) {
             p.inputs[key] = false;
         }
     }
 
-    public handleKeyDown(key: any, player: Player) {
+    public handleKeyDown(key: any, player: ServerPlayer) {
         const p = this.gameState.players.find(p => p.id === player.id);
         if (p) {
             p.inputs[key] = true;

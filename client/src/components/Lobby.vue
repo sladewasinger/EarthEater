@@ -27,7 +27,8 @@ function start() {
     console.log('Joining lobby with id: ' + lobbyId)
     engine.joinLobby(lobbyId)
         .then((response: SocketResponse) => {
-            console.log('Joined lobby with id: ' + response.data.id);
+            console.log("Join lobby response: ", response);
+            console.log('Joined lobby with id: ' + response.data);
             engine.start();
         })
         .catch((err: any) => {

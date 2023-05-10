@@ -14,7 +14,7 @@ function createLobby(e: Event) {
             console.log('Error creating lobby: ' + data.error);
             return;
         }
-        router.push('/lobby/' + data.data.id);
+        router.push('/lobby/' + data.data);
     });
 }
 </script>

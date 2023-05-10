@@ -2,15 +2,15 @@ import express from "express";
 import { createServer, Server as HttpServer } from "http";
 import { Server as SocketIOServer, Socket } from "socket.io";
 import { Lobby } from "./models/Lobby";
-import { Player } from "../../shared/Player";
 import { SocketResponse } from "../../shared/SocketResponse";
 import { Engine } from "./Engine";
+import { ServerPlayer } from "./models/ServerPlayer";
 
 export class Server {
     app: express.Application;
     server: HttpServer;
     io: SocketIOServer;
-    players: Player[] = [];
+    players: ServerPlayer[] = [];
     lobbies: Lobby[] = [];
     lobbyIdCounter: number = 0;
 
@@ -46,7 +46,7 @@ export class Server {
         this.io.on("connection", (socket: Socket) => {
 
             console.log("New client connected");
-            const player = new Player(socket.id, "Player");
+            const player = new ServerPlayer(socket.id, "Player", socket);
             this.players.push(player);
 
             // Handle socket events here
@@ -84,7 +84,7 @@ export class Server {
                 lobby.players.push(player);
                 lobby.owner = player;
                 this.lobbies.push(lobby);
-                callback(SocketResponse.success(lobby));
+                callback(SocketResponse.success(lobby.id));
             });
 
             socket.on('joinLobby', (data: any, callback) => {
@@ -101,13 +101,13 @@ export class Server {
                     .filter(l => l.id !== lobby.id)
                     .find((lobby) => lobby.players.find((p) => p.id === player.id));
                 if (playerInDiffLobby) {
-                    callback(SocketResponse.error("Player already in a lobby"));
+                    callback(SocketResponse.error("Player is already in a different lobby"));
                     return;
                 }
 
+                console.log(`Player '${player.name}' joined lobby ${lobby.id}`);
                 lobby.players.push(player);
                 callback(SocketResponse.success(lobby.id));
-
             });
 
             socket.on('startGame', (data: any, callback) => {
@@ -127,7 +127,7 @@ export class Server {
                 }
 
                 if (lobby && lobby.owner.id === player.id) {
-                    lobby.engine = new Engine(socket);
+                    lobby.engine = new Engine();
                     lobby.engine.start(lobby.players);
                     console.log('starting game')
                     callback(SocketResponse.success(lobby.id));

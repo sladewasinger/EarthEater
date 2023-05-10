@@ -1,11 +1,11 @@
-import { Explosion } from "./Explosion";
-import { Missile } from "./Missile";
-import { Vector } from "./Vector";
-import { Player } from "./Player";
+import { Explosion } from "../../../shared/Explosion";
+import { Missile } from "../../../shared/Missile";
+import { Vector } from "../../../shared/Vector";
+import { ServerPlayer } from "./ServerPlayer";
 
-export class GameState {
+export class ServerGameState {
     frame: number = 0;
-    players: Player[] = [];
+    players: ServerPlayer[] = [];
     explosions: Explosion[] = [];
     missiles: Missile[] = [];
     lastUpdate: number = 0;

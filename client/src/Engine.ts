@@ -20,6 +20,7 @@ export class Engine extends EventTarget {
     renderer: Renderer | undefined;
     isConnected: boolean = false;
     intervalId: NodeJS.Timer | undefined;
+    inputs: { [key: string]: boolean } = {};
 
     constructor() {
         super();
@@ -108,7 +109,7 @@ export class Engine extends EventTarget {
     }
 
     onKeyUp(e: KeyboardEvent): any {
-        this.gameState.inputs[e.key.toLowerCase()] = false;
+        this.inputs[e.key.toLowerCase()] = false;
 
         this.socket.emit('keyUp', e.key.toLowerCase());
 
@@ -116,7 +117,7 @@ export class Engine extends EventTarget {
     }
 
     onKeyDown(e: KeyboardEvent): any {
-        this.gameState.inputs[e.key.toLowerCase()] = true;
+        this.inputs[e.key.toLowerCase()] = true;
 
         this.socket.emit('keyDown', e.key.toLowerCase());
     }
@@ -336,10 +337,10 @@ export class Engine extends EventTarget {
         const maxSlope = 2;
         const speed = 20;
         let direction = 0;
-        if (this.gameState.inputs['d']) {
+        if (this.inputs['d']) {
             direction = 1;
         }
-        if (this.gameState.inputs['a']) {
+        if (this.inputs['a']) {
             direction = -1;
         }
         if (direction !== 0) {
@@ -364,15 +365,15 @@ export class Engine extends EventTarget {
 
         let angleAdjustment = 0;
 
-        if (this.gameState.inputs['q']) {
+        if (this.inputs['q']) {
             angleAdjustment = -0.001;
-            if (this.gameState.inputs["shift"]) {
+            if (this.inputs["shift"]) {
                 angleAdjustment *= 10;
             }
         }
-        if (this.gameState.inputs['e']) {
+        if (this.inputs['e']) {
             angleAdjustment = 0.001;
-            if (this.gameState.inputs["shift"]) {
+            if (this.inputs["shift"]) {
                 angleAdjustment *= 10;
             }
         }
@@ -381,16 +382,16 @@ export class Engine extends EventTarget {
             this.myPlayer.facingAngle = MathUtils.clamp(this.myPlayer.facingAngle, Math.PI, 2 * Math.PI);
         }
 
-        if (this.gameState.inputs['w']) {
+        if (this.inputs['w']) {
             this.myPlayer.power += 2;
             this.myPlayer.power = MathUtils.clamp(this.myPlayer.power, this.engineState.minCanonVelocity, this.engineState.maxCanonVelocity);
         }
-        if (this.gameState.inputs['s']) {
+        if (this.inputs['s']) {
             this.myPlayer.power -= 2;
             this.myPlayer.power = MathUtils.clamp(this.myPlayer.power, this.engineState.minCanonVelocity, this.engineState.maxCanonVelocity);
         }
 
-        if (this.gameState.inputs[' '] && !this.engineState.fireDebounce) {
+        if (this.inputs[' '] && !this.engineState.fireDebounce) {
             this.engineState.fireDebounce = true;
             setTimeout(() => {
                 this.engineState.fireDebounce = false;
@@ -399,7 +400,7 @@ export class Engine extends EventTarget {
             this.fireMissile(this.myPlayer.getCanonTipPosition(), this.myPlayer.getCanonTipVelocity());
         }
 
-        if (this.gameState.inputs['0']) {
+        if (this.inputs['0']) {
             this.centerCameraOnScreen();
         }
     }

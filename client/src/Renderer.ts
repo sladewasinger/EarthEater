@@ -22,7 +22,6 @@ export class Renderer {
 
     constructor() {
         this.id = MathUtils.uuidv4();
-        console.log('Renderer: ', this.id);
 
         this.canvas = document.createElement('canvas');
         document.body.appendChild(this.canvas);
@@ -47,15 +46,11 @@ export class Renderer {
 
     zoom(zoom: number) {
         this.camera.zoom = zoom;
-
-        console.log('zoom');
     }
 
     pan(x: number, y: number) {
         this.camera.x = x;
         this.camera.y = y;
-
-        console.log('pan');
     }
 
     resize() {
