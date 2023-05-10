@@ -10,7 +10,7 @@ export class SocketResponse {
     }
 
     static success(data: any): SocketResponse {
-        return new SocketResponse(data, null, 'success');
+        return new SocketResponse(data, undefined, 'success');
     }
 
     static error(error: string): SocketResponse {

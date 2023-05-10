@@ -1,7 +1,6 @@
 import { GameState } from "../../shared/GameState";
 import { Renderer } from "./Renderer";
 import { Vector } from "../../shared/Vector";
-import { Player } from "../../shared/Player";
 import { Mouse } from "./models/Mouse";
 import { Explosion } from "../../shared/Explosion";
 import { MathUtils } from "../../shared/MathUtils";
@@ -429,54 +428,5 @@ export class Engine extends EventTarget {
             this.renderer.zoom(this.renderer.camera.zoom + 0.1);
             this.centerCameraOnScreen();
         }
-    }
-
-    private async createTerrainMesh(): Promise<Vector[]> {
-        let worldWidth = this.gameState.worldWidth;
-        let worldHeight = this.gameState.worldHeight;
-        let minHeight = 200; // Define the minimum height of the terrain here
-        let maxHeight = worldHeight - 200; // Define the maximum height of the terrain here
-        let startPos = new Vector(0, Math.round(worldHeight / 2));
-        let endPosX = worldWidth;
-
-        let terrainMesh = <Vector[]>[];
-        terrainMesh.push(startPos);
-
-        let resolution = 5; // space between points
-
-        // implement midpoint displacement algorithm
-        let points = [startPos, new Vector(endPosX, startPos.y)];
-
-        const roughness = 0.4;
-
-        let displacement = worldHeight;
-
-        while (points.length < Math.floor(worldWidth / resolution)) {
-            for (let i = 0; i < points.length - 1; i += 2) {
-                let p1 = points[i];
-                let p2 = points[i + 1];
-                let mid = new Vector((p1.x + p2.x) / 2, (p1.y + p2.y) / 2);
-
-                //let displacement = Math.abs(p1.y - p2.y) * roughness;
-
-                mid.y += MathUtils.random(-displacement, displacement);
-                mid.y = Math.max(minHeight, Math.min(maxHeight, mid.y));
-
-                points.splice(i + 1, 0, mid);
-                //await this.sleep(1);
-
-                this.gameState.terrainMesh = points;
-            }
-            displacement *= roughness;
-        }
-        terrainMesh.push(...points);
-        terrainMesh.push(new Vector(endPosX, startPos.y));
-
-        const bottomRight = new Vector(worldWidth, worldHeight);
-        const bottomLeft = new Vector(0, worldHeight);
-        terrainMesh.push(bottomRight);
-        terrainMesh.push(bottomLeft);
-
-        return terrainMesh;
     }
 }
