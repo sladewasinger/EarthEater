@@ -18,14 +18,17 @@ export class Renderer {
     explosions: Explosion[] = [];
     clouds: Cloud[] = [];
     timeOfDay: number = 0;
+    id: string = '';
 
     constructor() {
-        this.canvas = document.createElement('canvas');
-        this.offscreenCanvas = document.createElement('canvas');
-        this.offscreenCanvas.width = this.canvas.width;
-        this.offscreenCanvas.height = this.canvas.height;
+        this.id = MathUtils.uuidv4();
+        console.log('Renderer: ', this.id);
 
+        this.canvas = document.createElement('canvas');
         document.body.appendChild(this.canvas);
+
+        this.offscreenCanvas = document.createElement('canvas');
+
         window.addEventListener('resize', this.resize.bind(this));
         this.resize();
     }
@@ -44,16 +47,23 @@ export class Renderer {
 
     zoom(zoom: number) {
         this.camera.zoom = zoom;
+
+        console.log('zoom');
     }
 
     pan(x: number, y: number) {
         this.camera.x = x;
         this.camera.y = y;
+
+        console.log('pan');
     }
 
     resize() {
         this.canvas.width = window.innerWidth;
         this.canvas.height = window.innerHeight;
+
+        this.canvas.style.width = `${window.innerWidth}px`;
+        this.canvas.style.height = `${window.innerHeight}px`;
 
         this.offscreenCanvas.width = this.canvas.width;
         this.offscreenCanvas.height = this.canvas.height;
@@ -106,6 +116,8 @@ export class Renderer {
 
         // Clear the canvas
         this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.offscreenCanvas.getContext('2d')?.clearRect(0, 0, this.offscreenCanvas.width, this.offscreenCanvas.height);
+
         this.renderSky(this.context, gameState);
         this.renderSun(this.context, gameState);
         this.renderMoon(this.context, gameState);
@@ -252,6 +264,9 @@ export class Renderer {
             throw new Error("Could not get offscreen canvas context");
         }
 
+        // Clear the offscreen canvas
+        offscreenCtx.clearRect(0, 0, this.offscreenCanvas.width, this.offscreenCanvas.height);
+
         // Draw the outer circle on the offscreen canvas
         offscreenCtx.fillStyle = "#ffffff";
         offscreenCtx.beginPath();
@@ -338,6 +353,9 @@ export class Renderer {
 
     private renderTerrainMesh(ctx: CanvasRenderingContext2D, gameState: GameState) {
         let terrainMesh = gameState.terrainMesh;
+        if (!terrainMesh || terrainMesh.length === 0) {
+            return;
+        }
 
         ctx.save();
         this.adjustToCamera(ctx);
@@ -561,11 +579,11 @@ export class Renderer {
     }
 
     private renderPlayerInfo(ctx: CanvasRenderingContext2D, gameState: GameState) {
-        ctx.save();
-        this.adjustToCamera(ctx);
-
         const player = gameState.players[gameState.currentPlayerIndex];
         if (!player) return;
+
+        ctx.save();
+        this.adjustToCamera(ctx);
 
         ctx.font = "20px Arial";
         ctx.fillStyle = "#000000";
@@ -582,6 +600,7 @@ export class Renderer {
             //ctx.strokeText(textLines[i], gameState.worldWidth - 10 - ctx.measureText(textLines[i]).width, y + 30 * i);
             ctx.fillText(textLines[i], gameState.worldWidth - 10 - ctx.measureText(textLines[i]).width, y + 30 * i);
         }
+
 
         ctx.restore();
     }

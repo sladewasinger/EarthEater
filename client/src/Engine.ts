@@ -25,15 +25,17 @@ export class Engine extends EventTarget {
     constructor() {
         super();
 
+        this.gameState = new GameState();
+
         let hostname = "eartheater.azurewebsites.net";
         let port = 80;
+
         if (window.location.hostname === "localhost") {
             port = 3000;
             hostname = "localhost";
         }
-        this.socket = socketio.connect(window.location.protocol + "//" + hostname + ":" + port);
 
-        this.gameState = new GameState();
+        this.socket = socketio.connect(window.location.protocol + "//" + hostname + ":" + port);
 
         window.addEventListener('keydown', this.onKeyDown.bind(this));
         window.addEventListener('keyup', this.onKeyUp.bind(this));
@@ -53,9 +55,13 @@ export class Engine extends EventTarget {
         });
 
         this.socket.on('gameStateUpdate', (socketResponse: any) => {
-            console.log('gameStateUpdate', socketResponse);
+            const prevGameState = this.gameState;
             const data = socketResponse.data;
             this.gameState = data.gameState;
+            if (!prevGameState) {
+                this.renderer?.resize();
+                this.centerCameraOnScreen();
+            }
         });
     }
 
@@ -133,7 +139,7 @@ export class Engine extends EventTarget {
     public async start() {
         if (this.started) {
             console.log("Engine already started");
-            return;
+            this.reset();
         }
 
         this.started = true;
@@ -178,6 +184,7 @@ export class Engine extends EventTarget {
     private centerCameraOnScreen() {
         if (this.renderer === undefined) return;
 
+        console.log("center camera on screen");
         this.renderer.pan(
             -(window.innerWidth / this.renderer.camera.zoom - this.gameState.worldWidth) / 2,
             -(window.innerHeight / this.renderer.camera.zoom - this.gameState.worldHeight) / 2
@@ -190,7 +197,7 @@ export class Engine extends EventTarget {
         const now = Date.now();
         const dt = Math.min(now - this.gameState.lastUpdate, 1000 / 20);
 
-        this.gameState.frame++;
+        //this.gameState.frame++;
 
         // apply gravity
         for (let player of this.gameState.players) {
@@ -210,7 +217,6 @@ export class Engine extends EventTarget {
                     player.position.y = y - player.hitBox.y;
                 }
             }
-
         }
 
         this.handlePlayerInput(dt);
@@ -290,7 +296,7 @@ export class Engine extends EventTarget {
             );
         }
 
-        this.gameState.lastUpdate = now;
+        //this.gameState.lastUpdate = now;
     }
 
     private smoothTerrain() {

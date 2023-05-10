@@ -1,6 +1,15 @@
 import { Vector } from "./Vector";
 
 export class MathUtils {
+    static uuidv4(): string {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+            // eslint-disable-next-line
+            let r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+            // eslint-disable-next-line
+            return v.toString(16);
+        });
+    }
+
     static snapToNearestAngle(angle: number, subAngle: number) {
         return Math.round(angle / subAngle) * subAngle;
     }

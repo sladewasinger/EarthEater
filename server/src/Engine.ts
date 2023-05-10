@@ -145,7 +145,6 @@ export class Engine {
     }
 
     public handleKeyUp(key: any, player: Player) {
-        console.log('key up', key)
         const p = this.gameState.players.find(p => p.id === player.id);
         if (p) {
             p.inputs[key] = false;
@@ -153,9 +152,7 @@ export class Engine {
     }
 
     public handleKeyDown(key: any, player: Player) {
-        console.log('key down', key)
         const p = this.gameState.players.find(p => p.id === player.id);
-        console.log('p', p, 'player', player)
         if (p) {
             p.inputs[key] = true;
         }

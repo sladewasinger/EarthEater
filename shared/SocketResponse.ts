@@ -6,6 +6,7 @@ export class SocketResponse {
     private constructor(data?: any, error?: string, type?: 'success' | 'error') {
         this.data = data;
         this.error = error;
+        this.type = type || 'success';
     }
 
     static success(data: any): SocketResponse {

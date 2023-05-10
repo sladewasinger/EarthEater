@@ -16,10 +16,10 @@ watch(() => route.params.id, (newVal, oldVal) => {
         start();
     }
 });
+
 onMounted(() => {
     start();
 });
-
 
 function start() {
     const lobbyId = getLobbyId();
