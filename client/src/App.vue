@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, reactive } from 'vue';
+import { onMounted, onUnmounted, onUpdated, reactive } from 'vue';
 import LoadingSpinner from './components/LoadingSpinner.vue';
 import { engine } from './main';
 
@@ -7,10 +7,15 @@ const state = reactive({
   isConnected: false,
 });
 
+onUpdated(() => {
+  engine.leaveLobbies();
+});
+
 onMounted(() => {
+
   function onConnected() {
-    state.isConnected = true;
     console.log("Engine is connected");
+    state.isConnected = true;
   }
 
   function onDisconnected() {
@@ -23,7 +28,7 @@ onMounted(() => {
 
   if (engine.isConnected) {
     console.log("Engine is already connected");
-    state.isConnected = true;
+    onConnected();
   }
 
   onUnmounted(() => {

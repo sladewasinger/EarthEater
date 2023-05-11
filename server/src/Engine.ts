@@ -286,6 +286,13 @@ export class Engine {
         this.engineState.debug = !this.engineState.debug;
     }
 
+    handleFire(player: ServerPlayer) {
+        console.log('fire');
+        const pos = player.getCanonTipPosition();
+        const vel = player.getCanonTipVelocity();
+        this.fireMissile(pos, vel);
+    }
+
     handleImmediateInput(key: string) {
     }
 

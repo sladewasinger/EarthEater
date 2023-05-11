@@ -64,8 +64,22 @@ export class Server {
                 });
             });
 
+            socket.on("leaveLobbies", () => {
+                console.log("leaveLobby");
+                const player = this.players.find((player) => player.id === socket.id);
+                for (let i = 0; i < this.lobbies.length; i++) {
+                    const lobby = this.lobbies[i];
+                    if (lobby.players.find((p) => p.id === player.id)) {
+                        lobby.players = lobby.players.filter((p) => p.id !== player.id);
+                        if (lobby.players.length === 0) {
+                            this.lobbies.splice(i, 1);
+                        }
+                    }
+                }
+            });
+
             socket.on("createLobby", (data: any, callback) => {
-                console.log("createLobby data:", data);
+                console.log("createLobby");
                 const player = this.players.find((player) => player.id === socket.id);
 
                 if (!player) {
@@ -105,6 +119,12 @@ export class Server {
                     return;
                 }
 
+                // check if player is already in lobby
+                if (lobby.players.find((p) => p.id === player.id)) {
+                    callback(SocketResponse.success(lobby.id));
+                    return;
+                }
+
                 console.log(`Player '${player.name}' joined lobby ${lobby.id}`);
                 lobby.players.push(player);
                 callback(SocketResponse.success(lobby.id));
@@ -126,7 +146,7 @@ export class Server {
                     return;
                 }
 
-                if (lobby && lobby.owner.id === player.id) {
+                if (lobby && lobby.owner.id === player.id && lobby.engine === undefined) {
                     lobby.engine = new Engine();
                     lobby.engine.start(lobby.players);
                     console.log('starting game')
@@ -150,6 +170,25 @@ export class Server {
                 if (lobby && player) {
                     lobby.engine?.handleKeyUp(data, player);
                 }
+            });
+
+            socket.on('fire', (data: any) => {
+                const player = this.players.find((player) => player.id === socket.id);
+                const lobby = this.lobbies.find((lobby) => lobby.players.find((p) => p.id === player.id));
+                if (!lobby || !player) {
+                    console.log('fire: lobby or player not found');
+                    return;
+                }
+                lobby.engine?.handleFire(player);
+            });
+
+            socket.on('getMyPlayerId', (data: any, callback) => {
+                const player = this.players.find((player) => player.id === socket.id);
+                if (!player) {
+                    callback(SocketResponse.error("Player not found"));
+                    return;
+                }
+                callback(SocketResponse.success(player.id));
             });
         });
 

@@ -47,6 +47,9 @@ export class Engine extends EventTarget {
         this.socket.on("connect", () => {
             this.isConnected = true;
             this.dispatchEvent(new Event("connected"));
+            this.socket.emit("getMyPlayerId", null, (response: any) => {
+                this.engineState.myPlayerId = response.data;
+            });
         });
 
         this.socket.on("disconnect", () => {
@@ -63,6 +66,10 @@ export class Engine extends EventTarget {
                 this.centerCameraOnScreen();
             }
         });
+    }
+
+    leaveLobbies() {
+        this.socket.emit('leaveLobbies', null);
     }
 
     createLobby() {
@@ -391,14 +398,14 @@ export class Engine extends EventTarget {
             this.myPlayer.power = MathUtils.clamp(this.myPlayer.power, this.engineState.minCanonVelocity, this.engineState.maxCanonVelocity);
         }
 
-        if (this.inputs[' '] && !this.engineState.fireDebounce) {
-            this.engineState.fireDebounce = true;
-            setTimeout(() => {
-                this.engineState.fireDebounce = false;
-            }, this.engineState.fireDelay);
+        // if (this.inputs[' '] && !this.engineState.fireDebounce) {
+        //     this.engineState.fireDebounce = true;
+        //     setTimeout(() => {
+        //         this.engineState.fireDebounce = false;
+        //     }, this.engineState.fireDelay);
 
-            this.fireMissile(this.myPlayer.getCanonTipPosition(), this.myPlayer.getCanonTipVelocity());
-        }
+        //     this.fireMissile(this.myPlayer.getCanonTipPosition(), this.myPlayer.getCanonTipVelocity());
+        // }
 
         if (this.inputs['0']) {
             this.centerCameraOnScreen();
@@ -411,6 +418,7 @@ export class Engine extends EventTarget {
 
     handleImmediateInput(key: string) {
         if (this.renderer === undefined) return;
+        if (this.myPlayer === undefined) return;
 
         if (key === '0') {
             this.centerCameraOnScreen();
@@ -428,6 +436,18 @@ export class Engine extends EventTarget {
         if (key === '+' || key === '=') {
             this.renderer.zoom(this.renderer.camera.zoom + 0.1);
             this.centerCameraOnScreen();
+        }
+
+        if (key === ' ' && !this.engineState.fireDebounce) {
+            this.engineState.fireDebounce = true;
+            setTimeout(() => {
+                this.engineState.fireDebounce = false;
+            }, this.engineState.fireDelay);
+            this.socket.emit('fire', {
+                angle: this.myPlayer.facingAngle,
+            });
+
+            this.fireMissile(this.myPlayer.getCanonTipPosition(), this.myPlayer.getCanonTipVelocity());
         }
     }
 }
